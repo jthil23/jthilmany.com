@@ -1,0 +1,26 @@
+---
+interface Props {
+  variant?: 'full' | 'emblem';
+  class?: string;
+  priority?: boolean;
+}
+const { variant = 'full', class: className, priority = false } = Astro.props;
+const stem = variant === 'full' ? 'jeff-thilmany-logo' : 'jeff-thilmany-emblem';
+const width = variant === 'full' ? 1174 : 954;
+const height = variant === 'full' ? 903 : 670;
+const alt = variant === 'full'
+  ? 'Jeff Thilmany — Build, Solve, Explore, Repeat. JT, code braces, mountains, a winding trail, and trees.'
+  : '';
+---
+<span class:list={['brand-art', className]}>
+  <img class="logo-dark-background" src={`/brand/${stem}-inverted.webp`} width={width} height={height} alt={alt} fetchpriority={priority ? 'high' : undefined} decoding="async" />
+  <img class="logo-light-background" src={`/brand/${stem}-transparent.webp`} width={width} height={height} alt={alt} decoding="async" />
+</span>
+
+<style>
+  .brand-art { display: block; }
+  .brand-art img { display: block; width: 100%; height: auto; }
+  .brand-art .logo-light-background { display: none; }
+  :global(:root[data-theme='light']) .logo-dark-background { display: none; }
+  :global(:root[data-theme='light']) .logo-light-background { display: block; }
+</style>

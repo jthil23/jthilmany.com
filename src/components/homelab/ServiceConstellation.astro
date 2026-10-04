@@ -1,0 +1,132 @@
+---
+import { categories, services } from '../../data/services';
+import ServiceLinkTag from './ServiceLinkTag.astro';
+const positions = [[16, 20], [50, 14], [84, 22], [85, 70], [64, 88], [36, 88], [15, 66]];
+const initial = services[0]!;
+---
+<section id="constellation" class="constellation" aria-labelledby="constellation-title">
+  <div class="section-heading"><div><p class="eyebrow">02 / The constellation</p><h2 id="constellation-title">An ecosystem, not a list.</h2></div><span class="section-number">{services.length} services / {categories.length} layers</span></div>
+  <p class="map-intro">Follow a layer. Pick a logo. See what makes the system tick.</p>
+  <div class="filters" role="group" aria-label="Highlight a service category">
+    <button type="button" data-category="all" aria-pressed="true">All layers</button>
+    {categories.map(category => <button type="button" data-category={category.name} aria-pressed="false">{category.name}</button>)}
+  </div>
+  <div class="map-board" aria-label="Illustrated service topology, grouped by category">
+    <svg class="connections" viewBox="0 0 1000 760" preserveAspectRatio="none" aria-hidden="true">
+      <ellipse cx="500" cy="380" rx="345" ry="250" class="orbit" />
+      <ellipse cx="500" cy="380" rx="205" ry="145" class="orbit inner" />
+      {categories.map((category, i) => <path data-connection={category.name} d={`M500 380 Q${positions[i]![0] * 10} 380 ${positions[i]![0] * 10} ${positions[i]![1] * 7.6}`} />)}
+      <circle cx="500" cy="380" r="87" class="hub-orbit" />
+    </svg>
+    <div class="map-hub"><span class="hub-kicker">The center of it all</span><strong>SOL</strong><span>Home / Unraid / Docker</span></div>
+    {categories.map((category, i) => <section class="cluster" data-cluster={category.name} style={`--x:${positions[i]![0]}%;--y:${positions[i]![1]}%;`} aria-labelledby={`cluster-${i}`}>
+      <h3 id={`cluster-${i}`}><span>{String(i + 1).padStart(2, '0')}</span> {category.name}</h3>
+      <div class="cluster-nodes">{services.filter(service => service.category === category.name).map(service => <button type="button" class="service-node" data-service={service.slug} aria-label={`Explore ${service.name}`} aria-controls="service-detail" aria-pressed={service.slug === initial.slug ? 'true' : 'false'} title={service.name}>
+        <span class="node-logo"><img src={`/icons/services/${service.icon}`} width="32" height="32" alt="" loading="lazy" /></span><span class="node-label">{service.name}</span>
+      </button>)}</div>
+    </section>)}
+  </div>
+  <div id="service-detail" class="detail-panel" aria-live="polite" aria-atomic="true">
+    {services.map(service => <article data-detail={service.slug} hidden={service.slug !== initial.slug}>
+      <div class="detail-identity"><div class="detail-logo"><img src={`/icons/services/${service.icon}`} width="52" height="52" alt={`${service.name} logo`} loading="lazy" /></div><div><p class="eyebrow">{service.category}</p><h3>{service.name}</h3></div></div>
+      <p class="detail-description">{service.description}</p>
+      <div class="detail-access"><ServiceLinkTag service={service} /></div>
+    </article>)}
+  </div>
+  <p class="map-note">Conceptual connections, not a network diagram. Select a node with your keyboard, pointer, or touch.</p>
+</section>
+<script>
+  const constellation = document.querySelector<HTMLElement>('#constellation');
+  if (constellation) {
+    const filters = constellation.querySelectorAll<HTMLButtonElement>('[data-category]');
+    const nodes = constellation.querySelectorAll<HTMLButtonElement>('[data-service]');
+    const details = constellation.querySelectorAll<HTMLElement>('[data-detail]');
+    const clusters = constellation.querySelectorAll<HTMLElement>('[data-cluster]');
+    const connections = constellation.querySelectorAll<SVGPathElement>('[data-connection]');
+    function selectService(slug: string) {
+      nodes.forEach(node => node.setAttribute('aria-pressed', String(node.dataset.service === slug)));
+      details.forEach(detail => { detail.hidden = detail.dataset.detail !== slug; });
+    }
+    filters.forEach(filter => filter.addEventListener('click', () => {
+      const selected = filter.dataset.category;
+      filters.forEach(button => button.setAttribute('aria-pressed', String(button === filter)));
+      clusters.forEach(cluster => { cluster.classList.toggle('is-dimmed', selected !== 'all' && cluster.dataset.cluster !== selected); });
+      connections.forEach(connection => { connection.classList.toggle('is-dimmed', selected !== 'all' && connection.dataset.connection !== selected); });
+      const first = selected === 'all' ? nodes[0] : Array.from(clusters).find(cluster => cluster.dataset.cluster === selected)?.querySelector<HTMLButtonElement>('[data-service]');
+      if (first?.dataset.service) selectService(first.dataset.service);
+    }));
+    nodes.forEach(node => {
+      const select = () => { if (node.dataset.service) selectService(node.dataset.service); };
+      node.addEventListener('mouseenter', select);
+      node.addEventListener('focus', select);
+      node.addEventListener('click', select);
+    });
+    const selectFromHash = () => {
+      const slug = window.location.hash.slice(1);
+      if (Array.from(nodes).some(node => node.dataset.service === slug)) selectService(slug);
+    };
+    selectFromHash();
+    window.addEventListener('hashchange', selectFromHash);
+  }
+</script>
+<style>
+  .constellation { padding-block: 56px; scroll-margin-top: 24px; }
+  .constellation h2 { font-size: clamp(2rem, 4vw, 3.4rem); letter-spacing: -.05em; line-height: 1.1; }
+  .map-intro { color: var(--muted); }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 28px; }
+  .filters button { border: 1px solid var(--line); color: var(--muted); border-radius: 99px; background: var(--panel); padding: 9px 14px; cursor: pointer; font-size: .75rem; }
+  .filters button[aria-pressed="true"] { background: var(--soft); color: var(--accent); border-color: var(--accent); }
+  .map-board { position: relative; min-height: 920px; border: 1px solid var(--line); border-radius: 24px; background: radial-gradient(ellipse at center, var(--ambient), transparent 65%), var(--panel); isolation: isolate; }
+  .connections { position: absolute; width: 100%; height: 100%; inset: 0; z-index: -1; overflow: visible; }
+  .connections path { stroke: var(--accent); stroke-width: 1; stroke-opacity: .4; fill: none; transition: opacity .25s; }
+  .orbit { fill: none; stroke: var(--line); stroke-dasharray: 3 9; }
+  .inner { stroke-opacity: .65; }
+  .hub-orbit { fill: var(--ambient); stroke: var(--accent); stroke-opacity: .35; stroke-dasharray: 2 8; }
+  .map-hub { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; text-align: center; }
+  .map-hub strong { font-size: 4.5rem; line-height: 1.25; letter-spacing: -.06em; color: var(--text); }
+  .map-hub span { color: var(--muted); font: .6rem var(--font-mono); }
+  .hub-kicker { text-transform: uppercase; letter-spacing: .08em; }
+  .cluster { position: absolute; left: var(--x); top: var(--y); transform: translate(-50%, -50%); width: 280px; transition: opacity .25s; }
+  .cluster h3 { text-align: center; font-size: .72rem; font-weight: 600; margin: 0 0 12px; }
+  .cluster h3 > span { color: var(--accent); font: .6rem var(--font-mono); margin-right: 4px; }
+  .cluster-nodes { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 8px; }
+  .service-node { display: grid; justify-items: center; gap: 6px; width: 62px; background: none; border: 0; color: var(--muted); padding: 0; cursor: pointer; border-radius: 10px; }
+  .node-logo { display: grid; place-items: center; width: 50px; height: 50px; border: 1px solid var(--line); background: var(--soft); border-radius: 14px; transition: transform .2s, border-color .2s, background .2s; }
+  .node-logo img, .detail-logo img { object-fit: contain; }
+  .node-label { font-size: .57rem; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .service-node:hover .node-logo, .service-node[aria-pressed="true"] .node-logo { border-color: var(--accent); background: var(--panel); transform: translateY(-3px); box-shadow: 0 0 20px var(--ambient); }
+  .service-node[aria-pressed="true"] { color: var(--accent); }
+  .is-dimmed { opacity: .22; }
+  .cluster.is-dimmed:focus-within, .cluster.is-dimmed:hover { opacity: 1; }
+  .detail-panel { margin-top: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--soft); min-height: 140px; }
+  .detail-panel article:not([hidden]) { display: grid; grid-template-columns: minmax(240px, .8fr) 1.5fr auto; align-items: center; gap: 28px; padding: 24px 28px; }
+  .detail-identity { display: flex; align-items: center; gap: 18px; min-width: 0; }
+  .detail-logo { display: grid; place-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; width: 76px; height: 76px; flex-shrink: 0; }
+  .detail-identity .eyebrow { font-size: .6rem; margin: 0 0 4px; }
+  .detail-identity h3 { font-size: 1.35rem; line-height: 1.15; margin: 0; }
+  .detail-description { color: var(--muted); font-size: .9rem; margin: 0; }
+  .detail-access { font: .7rem var(--font-mono); color: var(--muted); }
+  .detail-access small { font-size: .65rem; }
+  .map-note { color: var(--muted); font: .7rem var(--font-mono); margin-top: 16px; }
+  @media (max-width: 1050px) { .cluster { width: 224px; } .service-node { width: 50px; } .node-logo { width: 44px; height: 44px; } .detail-panel article:not([hidden]) { grid-template-columns: 1fr 1.4fr; } .detail-access { grid-column: 2; } }
+  @media (max-width: 900px) {
+    .map-board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-height: auto; padding: 24px 16px; gap: 28px 16px; }
+    .connections { display: none; }
+    .map-hub { grid-column: 1 / -1; position: static; transform: none; padding-block: 8px 20px; border-bottom: 1px solid var(--line); }
+    .cluster { position: static; transform: none; width: auto; min-width: 0; }
+    .cluster:last-child { grid-column: 1 / -1; }
+    .cluster-nodes { gap: 12px 8px; }
+    .service-node { width: 56px; }
+  }
+  @media (max-width: 580px) {
+    .detail-panel { min-height: 270px; }
+    .detail-panel article:not([hidden]) { grid-template-columns: minmax(0, 1fr); padding: 24px; gap: 18px; }
+    .detail-access { grid-column: auto; }
+    .map-board { padding-inline: 12px; gap: 28px 8px; }
+    .cluster h3 { font-size: .65rem; }
+    .service-node { width: 48px; }
+    .node-logo { width: 42px; height: 42px; }
+    .cluster-nodes { gap: 10px 4px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .cluster, .connections path, .node-logo { transition: none; } .service-node:hover .node-logo, .service-node[aria-pressed="true"] .node-logo { transform: none; } }
+</style>

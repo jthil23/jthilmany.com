@@ -1,0 +1,21 @@
+---
+import type { Service } from '../../data/services';
+interface Props { service: Service }
+const { service } = Astro.props;
+const link = service.link;
+---
+{link ? (
+  <span class="service-link">
+    <a class="text-link" href={link.href} rel="noreferrer">Open {service.name} ↗</a>
+    {link.scope === 'home' && <span class="scope" title="Reachable on the home network or over Tailscale">Home network</span>}
+  </span>
+) : (
+  <span class="service-link private">Behind the scenes<small>No web interface linked</small></span>
+)}
+
+<style>
+  .service-link { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: .85rem; }
+  .scope { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 999px; padding: 2px 8px; }
+  .private { flex-direction: column; align-items: flex-start; gap: 2px; color: var(--muted); }
+  .private small { font-size: .75rem; opacity: .8; }
+</style>

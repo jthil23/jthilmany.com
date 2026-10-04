@@ -1,0 +1,180 @@
+---
+import '../styles/global.css';
+import { site } from '../data/site';
+import BrandLogo from '../components/BrandLogo.astro';
+import CommandPalette from '../components/CommandPalette.astro';
+import Snowfall from '../components/fx/Snowfall.astro';
+interface Props { title: string; description?: string; noindex?: boolean }
+const { title, description = site.description, noindex = false } = Astro.props;
+const nav = [['Work', '/work'], ['Projects', '/projects'], ['Lab', '/lab'], ['Notes', '/notes'], ['Homelab', '/homelab']];
+const pathname = Astro.url.pathname.replace(/\/$/, '') || '/';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · {site.name}</title>
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta property="og:title" content={`${title} · ${site.name}`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={new URL(Astro.url.pathname, Astro.site)} />
+    <script is:inline>
+      try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="header-shell">
+      <div class="scroll-progress" aria-hidden="true"></div>
+      <header class="container header">
+        <a class="brand" href="/" aria-label="Jeff Thilmany home"><BrandLogo variant="emblem" class="brand-logo" /><span>{site.domain}</span></a>
+        <nav aria-label="Main navigation">{nav.map(([label, href]) => <a href={href} aria-current={pathname === href || pathname.startsWith(href + '/') ? 'page' : undefined}>{label}</a>)}</nav>
+        <div class="header-tools">
+          <button id="palette-trigger" class="palette-trigger" type="button" aria-label="Open command palette" aria-haspopup="dialog" aria-controls="command-palette" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10" cy="10" r="6.5" /><path d="m15 15 6 6" /></svg><kbd>⌘ K</kbd></button>
+          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch color theme">◐</button>
+        </div>
+      </header>
+    </div>
+    <main id="main"><slot /></main>
+    <footer class="container footer">
+      <div><span>© {new Date().getFullYear()} {site.name}</span><p>Build. Solve. Explore. Repeat.</p></div>
+      <div class="footer-links">{site.socials.map(social => <a href={social.url} rel="me">{social.label} ↗</a>)}<a href="/notes/building-this-site">About this site ↗</a></div>
+    </footer>
+    <CommandPalette />
+    <Snowfall flurry />
+    <div class="snow-toast" role="status" aria-live="polite" aria-atomic="true"></div>
+    <script>
+      const toggle = document.querySelector<HTMLButtonElement>('#theme-toggle');
+      const current = () => document.documentElement.dataset.theme || 'dark';
+      function update() { toggle?.setAttribute('aria-label', `Switch to ${current() === 'dark' ? 'light' : 'dark'} theme`); }
+      toggle?.addEventListener('click', () => {
+        const theme = current() === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = theme;
+        try { localStorage.setItem('theme', theme); } catch {}
+        update();
+      });
+      update();
+      const header = document.querySelector<HTMLElement>('.header-shell');
+      let scrollFrame = 0;
+      const updateHeader = () => {
+        scrollFrame = 0;
+        header?.classList.toggle('is-scrolled', window.scrollY > 16);
+        const distance = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = distance > 0 ? Math.min(1, Math.max(0, window.scrollY / distance)) : 0;
+        header?.style.setProperty('--scroll-progress', String(progress));
+      };
+      const scheduleHeader = () => {
+        if (!scrollFrame && !document.hidden) scrollFrame = requestAnimationFrame(updateHeader);
+      };
+      window.addEventListener('scroll', scheduleHeader, { passive: true });
+      window.addEventListener('resize', scheduleHeader, { passive: true });
+      new ResizeObserver(scheduleHeader).observe(document.body);
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) { cancelAnimationFrame(scrollFrame); scrollFrame = 0; }
+        else scheduleHeader();
+      });
+      window.addEventListener('pageshow', scheduleHeader);
+      updateHeader();
+
+      const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      if (!motion.matches && 'IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          });
+        }, { threshold: 0, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll<HTMLElement>('.reveal').forEach(element => {
+          // Only enhance offscreen content; reading never waits on an entrance.
+          if (element.getBoundingClientRect().top < window.innerHeight) element.classList.add('is-visible');
+          else {
+            element.dataset.revealReady = '';
+            observer.observe(element);
+          }
+        });
+        motion.addEventListener('change', event => {
+          if (!event.matches) return;
+          observer.disconnect();
+          document.querySelectorAll('.reveal').forEach(element => element.classList.add('is-visible'));
+        });
+      }
+
+      // One delegated pointer listener, enabled only for precise mouse input.
+      const glowInput = window.matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)');
+      let glow: HTMLElement | null = null;
+      let glowFrame = 0;
+      let glowX = 0;
+      let glowY = 0;
+      const clearGlow = () => {
+        cancelAnimationFrame(glowFrame);
+        glowFrame = 0;
+        glow?.style.removeProperty('--glow-active');
+        glow = null;
+      };
+      const moveGlow = (event: PointerEvent) => {
+        if (event.pointerType !== 'mouse' || document.hidden) { clearGlow(); return; }
+        const target = event.target instanceof Element ? event.target.closest<HTMLElement>('.card, [data-glow]') : null;
+        if (target !== glow) { clearGlow(); glow = target; }
+        if (!glow) return;
+        glowX = event.clientX;
+        glowY = event.clientY;
+        if (!glowFrame) glowFrame = requestAnimationFrame(() => {
+          glowFrame = 0;
+          if (!glow || document.hidden) return;
+          const bounds = glow.getBoundingClientRect();
+          glow.style.setProperty('--glow-x', `${glowX - bounds.left}px`);
+          glow.style.setProperty('--glow-y', `${glowY - bounds.top}px`);
+          glow.style.setProperty('--glow-active', '1');
+        });
+      };
+      const updateGlowInput = () => {
+        document.removeEventListener('pointermove', moveGlow);
+        clearGlow();
+        if (glowInput.matches) document.addEventListener('pointermove', moveGlow, { passive: true });
+      };
+      updateGlowInput();
+      glowInput.addEventListener('change', updateGlowInput);
+      document.addEventListener('pointerleave', clearGlow);
+      window.addEventListener('blur', clearGlow);
+      document.addEventListener('visibilitychange', () => { if (document.hidden) clearGlow(); });
+
+      const konami = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a'];
+      let konamiPosition = 0;
+      let toastTimer: ReturnType<typeof setTimeout> | undefined;
+      const toast = document.querySelector<HTMLElement>('.snow-toast');
+      document.addEventListener('keydown', event => {
+        const target = event.target;
+        if (event.repeat || event.metaKey || event.ctrlKey || event.altKey ||
+          (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, [role=\"textbox\"], dialog[open]')))) {
+          konamiPosition = 0;
+          return;
+        }
+        const key = event.key.toLowerCase();
+        konamiPosition = key === konami[konamiPosition] ? konamiPosition + 1 : key === konami[0] ? 1 : 0;
+        if (konamiPosition !== konami.length) return;
+        konamiPosition = 0;
+        window.dispatchEvent(new CustomEvent('jt:snow'));
+        if (toast) {
+          clearTimeout(toastTimer);
+          toast.textContent = 'Let it snow ❄';
+          toastTimer = setTimeout(() => { toast.textContent = ''; }, 4200);
+        }
+      });
+
+      const colors = getComputedStyle(document.documentElement);
+      console.info(
+        '%c\\n  {  J T  }\\n%c  Build • Solve • Explore • Repeat\\n%c  https://github.com/jthil23\\n',
+        `color:${colors.getPropertyValue('--hyper-blue')};font:bold 20px monospace;`,
+        `color:${colors.getPropertyValue('--muted')};font:12px monospace;`,
+        `color:${colors.getPropertyValue('--accent')};font:12px monospace;`,
+      );
+    </script>
+  </body>
+</html>

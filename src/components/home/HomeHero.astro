@@ -1,0 +1,149 @@
+---
+import BrandLogo from '../BrandLogo.astro';
+import Snowfall from '../fx/Snowfall.astro';
+import { site } from '../../data/site';
+---
+<section class="home-hero" aria-labelledby="home-heading" data-home-scene>
+  <div class="scene" aria-hidden="true">
+    <div class="aurora"><span></span><span></span><span></span></div>
+    <svg viewBox="0 0 1600 800" preserveAspectRatio="xMidYMax slice" focusable="false">
+      <defs>
+        <linearGradient id="home-ridge-back" x2="0" y2="1">
+          <stop stop-color="var(--accent)" stop-opacity=".24" />
+          <stop offset="1" stop-color="var(--panel)" />
+        </linearGradient>
+        <linearGradient id="home-ridge-front" x2="0" y2="1">
+          <stop stop-color="var(--soft)" />
+          <stop offset="1" stop-color="var(--bg)" />
+        </linearGradient>
+        <linearGradient id="home-trail" x1="0" y1="1" x2="1" y2="0">
+          <stop stop-color="var(--accent)" stop-opacity=".08" />
+          <stop offset=".6" stop-color="var(--accent)" stop-opacity=".65" />
+          <stop offset="1" stop-color="var(--text)" stop-opacity=".25" />
+        </linearGradient>
+        <path id="home-pine" d="M0 0 12 24H6L20 47H12L29 74H5V87H-5V74H-29L-12 47H-20L-6 24H-12Z" />
+      </defs>
+      <g class="ridge ridge-back">
+        <path d="M-60 545 80 405 172 482 355 259 438 368 537 304 689 458 884 212 971 322 1060 283 1292 495 1445 331 1660 512V850H-60Z" fill="url(#home-ridge-back)" />
+        <path d="m291 337 64-78 83 109-72-38-19 17-14-24Z M831 269l53-57 87 110-74-44-22 20-10-40Z" fill="var(--text)" opacity=".13" />
+        <path d="M-60 545 80 405 172 482 355 259 438 368 537 304 689 458 884 212 971 322 1060 283 1292 495 1445 331 1660 512" fill="none" stroke="var(--accent)" stroke-opacity=".3" />
+      </g>
+      <g class="ridge ridge-middle">
+        <path d="M-60 660 98 560 260 633 472 440 570 529 678 499 820 649 1023 443 1141 540 1239 512 1450 633 1660 499V850H-60Z" fill="url(#home-ridge-front)" />
+        <path d="M472 440 570 529 678 499 820 649 1023 443 1141 540 1239 512" fill="none" stroke="var(--line)" />
+      </g>
+      <g class="ridge ridge-front">
+        <path d="M-60 724Q162 617 363 727T806 688T1260 686T1660 676V850H-60Z" fill="var(--bg)" fill-opacity=".93" />
+        <path d="M924 846C718 773 1246 769 1051 727S933 683 1066 662" fill="none" stroke="url(#home-trail)" stroke-width="22" />
+        <path d="M924 846C718 773 1246 769 1051 727S933 683 1066 662" fill="none" stroke="var(--accent)" stroke-opacity=".4" stroke-width="1" stroke-dasharray="3 9" />
+        <g fill="var(--bg)">
+          <use href="#home-pine" transform="translate(55 570) scale(1.6)" />
+          <use href="#home-pine" transform="translate(130 625) scale(1.1)" />
+          <use href="#home-pine" transform="translate(211 632) scale(.8)" />
+          <use href="#home-pine" transform="translate(648 676) scale(.75)" />
+          <use href="#home-pine" transform="translate(682 684) scale(.5)" />
+          <use href="#home-pine" transform="translate(805 682) scale(.6)" />
+          <use href="#home-pine" transform="translate(1410 540) scale(1.9)" />
+          <use href="#home-pine" transform="translate(1495 598) scale(1.5)" />
+          <use href="#home-pine" transform="translate(1570 531) scale(2.2)" />
+        </g>
+      </g>
+    </svg>
+    <Snowfall />
+  </div>
+  <div class="container hero-layout">
+    <div class="hero-copy">
+      <p class="eyebrow">Jeff Thilmany / A little code. A little curiosity.</p>
+      <h1 id="home-heading">Build. Solve.<br /><span>Explore. Repeat.</span></h1>
+      <p class="lead">{site.description}</p>
+      <div class="actions">
+        <a class="button" href="/work">Professional focus <span aria-hidden="true">↗</span></a>
+        <a class="button secondary" href="/projects">Personal projects <span aria-hidden="true">↗</span></a>
+      </div>
+      <ul class="interest-list" aria-label="Interests">
+        <li>Tech</li><li>Outdoors</li><li>Smart living</li><li>AI</li>
+      </ul>
+    </div>
+    <div class="logo-stage">
+      <div class="orbit orbit-one" aria-hidden="true"></div>
+      <div class="orbit orbit-two" aria-hidden="true"></div>
+      <BrandLogo class="hero-logo" priority />
+      <span class="scene-label" aria-hidden="true">Always another trail to explore.</span>
+    </div>
+  </div>
+  <div class="hero-foot container" aria-hidden="true"><span>Build with purpose.</span><span>Explore with curiosity. ↓</span></div>
+</section>
+
+<style>
+  .home-hero { position: relative; isolation: isolate; overflow: hidden; border-bottom: 1px solid var(--line); background: radial-gradient(ellipse at 75% 30%, var(--ambient), transparent 65%); }
+  .scene { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+  .scene svg { position: relative; z-index: 1; width: 100%; height: 100%; max-width: none; opacity: .8; }
+  .aurora { position: absolute; inset: -15% -15% 28%; opacity: var(--aurora-opacity); filter: blur(24px); }
+  .aurora span { position: absolute; inset: 18% -10% 20%; border-radius: 45% 55% 48% 52%; background: linear-gradient(160deg, transparent 28%, var(--aurora-teal) 40%, var(--ice-bright) 46%, transparent 57%); transform: rotate(-10deg); animation: aurora-drift 24s ease-in-out infinite alternate; animation-play-state: paused; }
+  .aurora span:nth-child(2) { inset: 5% -5% 35%; background: linear-gradient(155deg, transparent 30%, var(--aurora-violet) 43%, var(--hyper-blue) 49%, transparent 59%); animation-duration: 31s; animation-delay: -12s; }
+  .aurora span:nth-child(3) { inset: 34% 0 0; background: linear-gradient(170deg, transparent 32%, var(--ice-bright) 43%, var(--aurora-teal) 49%, transparent 58%); animation-duration: 28s; animation-delay: -8s; }
+  .home-hero[data-scene-active] .aurora span { animation-play-state: running; }
+  @keyframes aurora-drift { to { transform: translate(4%, -5%) rotate(4deg) scaleY(1.15); } }
+  .ridge { transform-box: fill-box; transform-origin: center; }
+  .ridge-back { transform: translate(calc(var(--scene-x, 0px) * .3), calc(var(--scene-y, 0px) * .3)); }
+  .ridge-middle { transform: translate(calc(var(--scene-x, 0px) * .6), calc(var(--scene-y, 0px) * .6)); }
+  .ridge-front { transform: translate(var(--scene-x, 0px), var(--scene-y, 0px)); }
+  .hero-layout { display: grid; grid-template-columns: 1.15fr 1fr; align-items: center; gap: 28px; padding-block: 84px 105px; min-height: 690px; }
+  .hero-copy { min-width: 0; }
+  .hero-copy h1 { font-size: clamp(3rem, 5.8vw, 5.1rem); font-weight: 720; letter-spacing: -.055em; }
+  .hero-copy h1 span { color: var(--accent); }
+  .hero-copy .lead { max-width: 33rem; font-size: 18px; }
+  .interest-list { display: flex; flex-wrap: wrap; list-style: none; gap: 12px 20px; margin: 32px 0 0; padding: 0; font: 11px var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .12em; }
+  .interest-list li::before { content: '+'; color: var(--accent); margin-right: 7px; }
+  .logo-stage { position: relative; display: grid; place-items: center; min-width: 0; padding-block: 30px; }
+  .logo-stage :global(.hero-logo) { position: relative; z-index: 1; width: 100%; max-width: 520px; filter: drop-shadow(0 15px 30px var(--ambient)); }
+  .orbit { position: absolute; width: 88%; aspect-ratio: 1; border: 1px solid var(--line); border-radius: 50%; opacity: .4; }
+  .orbit-two { width: 105%; border-style: dashed; opacity: .2; }
+  .scene-label { margin-top: 10px; color: var(--muted); font: 10px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; }
+  .hero-foot { position: absolute; bottom: 22px; left: 0; right: 0; display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font: 10px var(--font-mono); text-transform: uppercase; letter-spacing: .14em; }
+  @media (max-width: 850px) { .hero-layout { gap: 16px; padding-block: 60px 85px; min-height: 570px; } .hero-copy h1 { font-size: clamp(2.6rem, 5.8vw, 4rem); } .scene-label { letter-spacing: .03em; } }
+  @media (max-width: 650px) { .hero-layout { grid-template-columns: minmax(0, 1fr); padding-block: 48px 65px; gap: 30px; } .hero-copy h1 { font-size: clamp(2.7rem, 10vw, 4rem); } .hero-copy .lead { font-size: 16px; } .logo-stage { width: min(340px, 90%); justify-self: center; padding-block: 10px; } .scene svg { opacity: .6; } .hero-foot { font-size: 8px; letter-spacing: .06em; } .interest-list { gap: 10px 16px; } }
+  @media (prefers-reduced-motion: reduce) { .ridge { transform: none; } .aurora span { animation: none; } }
+</style>
+
+<script>
+  const scene = document.querySelector<HTMLElement>('[data-home-scene]');
+  if (scene) {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let pointerX = 0;
+    let pointerY = 0;
+    let frame = 0;
+    let visible = true;
+    const paint = () => {
+      frame = 0;
+      if (reduced.matches || !visible || document.hidden) return;
+      const scroll = Math.min(24, Math.max(0, -scene.getBoundingClientRect().top) * .035);
+      scene.style.setProperty('--scene-x', `${pointerX}px`);
+      scene.style.setProperty('--scene-y', `${pointerY + scroll}px`);
+    };
+    const updateActivity = () => {
+      scene.toggleAttribute('data-scene-active', visible && !document.hidden && !reduced.matches);
+      if (!visible || document.hidden || reduced.matches) { cancelAnimationFrame(frame); frame = 0; }
+    };
+    const schedule = () => { if (!reduced.matches && visible && !document.hidden && !frame) frame = requestAnimationFrame(paint); };
+    scene.addEventListener('pointermove', (event) => {
+      if (event.pointerType !== 'mouse' || reduced.matches) return;
+      const bounds = scene.getBoundingClientRect();
+      pointerX = ((event.clientX - bounds.left) / bounds.width - .5) * 18;
+      pointerY = ((event.clientY - bounds.top) / bounds.height - .5) * 10;
+      schedule();
+    });
+    scene.addEventListener('pointerleave', () => { pointerX = 0; pointerY = 0; schedule(); });
+    window.addEventListener('scroll', schedule, { passive: true });
+    const observer = new IntersectionObserver(([entry]) => { visible = entry?.isIntersecting ?? false; updateActivity(); if (visible) schedule(); });
+    observer.observe(scene);
+    document.addEventListener('visibilitychange', () => { updateActivity(); schedule(); });
+    reduced.addEventListener('change', () => {
+      updateActivity();
+      if (reduced.matches) {
+        cancelAnimationFrame(frame); frame = 0;
+        scene.style.removeProperty('--scene-x'); scene.style.removeProperty('--scene-y');
+      } else schedule();
+    });
+  }
+</script>

@@ -1,0 +1,63 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Off trail · Page not found" description="This trail ends here. Head back home, explore the lab, or use quick navigation to find your way." noindex>
+  <section class="container section missing-page">
+    <div class="missing-copy">
+      <p class="eyebrow">404 / An unmarked turn</p>
+      <h1>Off trail.</h1>
+      <p class="lead">Good exploring. Wrong coordinates.</p>
+      <p class="muted">There’s no page at this address. The link may have moved, or a typo took us into the trees. Let’s get you back to familiar ground.</p>
+      <div class="actions"><a class="button" href="/">Back to basecamp</a><a class="button secondary" href="/lab">Explore the lab ↗</a></div>
+      <div class="trail-tip"><span class="tip-icon" aria-hidden="true">↗</span><p>Need a compass? <button type="button" data-open-palette>Open quick navigation</button><br /><span>Or press <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd> anywhere.</span></p></div>
+    </div>
+    <figure class="lost-landscape">
+      <svg viewBox="0 0 600 530" width="600" height="530" role="img" aria-labelledby="off-trail-title off-trail-desc">
+        <title id="off-trail-title">A winding trail through the mountains</title>
+        <desc id="off-trail-desc">An illustrated mountain landscape with pine trees, a trail marker pointing home, and a dotted trail disappearing beyond the ridge.</desc>
+        <defs>
+          <linearGradient id="trail-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--soft)" /><stop offset="1" stop-color="var(--bg)" /></linearGradient>
+          <pattern id="trail-map" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="var(--line)" stroke-width=".5" /></pattern>
+          <symbol id="trail-pine" viewBox="0 0 40 72"><path d="M20 0 4 28h8L0 48h15v24h10V48h15L28 28h8Z" fill="var(--soft)" stroke="var(--accent)" stroke-width="1" /></symbol>
+        </defs>
+        <rect x="1" y="1" width="598" height="528" rx="30" fill="url(#trail-sky)" stroke="var(--line)" />
+        <rect x="1" y="1" width="598" height="528" rx="30" fill="url(#trail-map)" />
+        <circle cx="438" cy="116" r="50" fill="var(--ice)" stroke="var(--line)" /><circle cx="438" cy="116" r="35" fill="none" stroke="var(--line)" stroke-dasharray="2 8" />
+        <text x="42" y="95" fill="none" stroke="var(--accent)" stroke-width="1" font-family="var(--font-mono)" font-size="64" font-weight="700" opacity=".55">404</text>
+        <path d="m23 333 128-176 73 99 89-152 159 224 62-94 43 90" fill="var(--panel)" stroke="var(--line)" stroke-width="1.5" stroke-linejoin="round" />
+        <path d="m115 207 36-50 40 55-30-10-10 13-12-22Zm160-37 38-66 45 64-25-8-16 18-13-24-14 20Z" fill="var(--soft)" stroke="var(--accent)" stroke-width="1" />
+        <path d="M23 366c83-60 114-46 183-25s115 38 183-14 118-47 188 12" fill="none" stroke="var(--line)" stroke-width="1.5" />
+        <path d="M23 408c64-43 117-53 204-22s128 24 180-10 107-29 170-10M23 453c105-44 157-18 212-1s127-16 188-30 111 1 154 21M23 493c109-30 176 7 244-3s176-51 310-4" fill="none" stroke="var(--line)" stroke-width="1" />
+        <path class="lost-trail" d="M283 506c-28-24-88-31-68-62s166-18 155-57-105-25-78-70 41-36 33-64" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="5 9" />
+        <use href="#trail-pine" x="62" y="328" width="39" height="70" /><use href="#trail-pine" x="95" y="362" width="25" height="45" /><use href="#trail-pine" x="435" y="344" width="45" height="81" /><use href="#trail-pine" x="480" y="370" width="30" height="54" /><use href="#trail-pine" x="141" y="441" width="28" height="50" />
+        <g stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"><path d="M328 223v75" /><path d="M304 227h53l13 12-13 12h-53Z" fill="var(--panel)" /></g>
+        <text x="312" y="243" fill="var(--text)" font-family="var(--font-mono)" font-size="10">HOME →</text>
+        <circle cx="283" cy="506" r="5" fill="var(--accent)" />
+        <g transform="translate(526 64)" fill="none" stroke="var(--muted)" stroke-width="1"><circle r="17" /><path d="M0-24V24M-24 0H24m24-13 5 13-5 13-5-13Z" /></g>
+        <text x="41" y="502" fill="var(--muted)" font-family="var(--font-mono)" font-size="9" letter-spacing="2">RECALCULATING THE ROUTE</text>
+      </svg>
+      <figcaption>Not all who wander are lost. This URL, though? Definitely.</figcaption>
+    </figure>
+  </section>
+</Base>
+<style>
+  .missing-page { min-height: 70vh; display: grid; grid-template-columns: 1fr 1.15fr; align-items: center; gap: 60px; padding-block: 80px; }
+  .missing-copy { min-width: 0; }
+  .missing-copy h1 { font-size: clamp(4rem, 7vw, 6.5rem); letter-spacing: -.06em; margin-bottom: 20px; }
+  .missing-copy > .muted { max-width: 440px; }
+  .missing-copy .actions { gap: 12px; }
+  .trail-tip { display: flex; align-items: flex-start; gap: 12px; margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--line); }
+  .tip-icon { color: var(--accent); font-size: 24px; line-height: 1.3; }
+  .trail-tip p { margin: 0; font-size: 13px; }
+  .trail-tip p > span { color: var(--muted); font-size: 11px; }
+  .trail-tip button { border: 0; padding: 0; background: none; color: var(--accent); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+  .trail-tip kbd { font: 11px var(--font-mono); color: var(--text); }
+  .lost-landscape { margin: 0; min-width: 0; }
+  .lost-landscape svg { display: block; width: 100%; height: auto; }
+  .lost-landscape figcaption { margin-top: 16px; color: var(--muted); font: 11px/1.6 var(--font-mono); text-align: center; }
+  .lost-trail { animation: wander 20s linear infinite; }
+  @keyframes wander { to { stroke-dashoffset: -140; } }
+  @media (max-width: 960px) { .missing-page { gap: 32px; } }
+  @media (max-width: 760px) { .missing-page { grid-template-columns: 1fr; padding-block: 48px; gap: 36px; } .lost-landscape { max-width: 540px; width: 100%; margin-inline: auto; } }
+  @media (prefers-reduced-motion: reduce) { .lost-trail { animation: none; } }
+</style>

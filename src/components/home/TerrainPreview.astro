@@ -1,0 +1,64 @@
+<div class="terrain-preview" data-terrain-preview>
+  <canvas width="600" height="300" role="img" aria-label="Generative contour-line illustration. The New terrain button redraws the landscape.">A landscape of winding blue contour lines.</canvas>
+  <div class="terrain-caption"><span aria-hidden="true">Contour study / procedural terrain</span><button type="button" data-terrain-shift>New terrain <span aria-hidden="true">↻</span></button></div>
+</div>
+<style>
+  .terrain-preview { position: relative; margin: 20px -26px 18px; background: var(--bg); border-block: 1px solid var(--line); }
+  canvas { display: block; width: 100%; height: 190px; }
+  .terrain-caption { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 18px; border-top: 1px solid var(--line); }
+  .terrain-caption > span { color: var(--muted); font: 8px var(--font-mono); letter-spacing: .03em; }
+  button { padding: 7px 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--accent); font: 9px var(--font-mono); white-space: nowrap; cursor: pointer; }
+  button:hover { background: var(--soft); }
+</style>
+<script>
+  const preview = document.querySelector<HTMLElement>('[data-terrain-preview]');
+  const canvas = preview?.querySelector('canvas');
+  const context = canvas?.getContext('2d');
+  if (preview && canvas && context) {
+    let seed = 1;
+    let pointer = .5;
+    let frame = 0;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const render = () => {
+      frame = 0;
+      const bounds = canvas.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      const ratio = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.round(bounds.width * ratio);
+      canvas.height = Math.round(bounds.height * ratio);
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      const theme = getComputedStyle(document.documentElement);
+      context.fillStyle = theme.getPropertyValue('--bg').trim();
+      context.fillRect(0, 0, bounds.width, bounds.height);
+      const accent = theme.getPropertyValue('--accent').trim();
+      const muted = theme.getPropertyValue('--muted').trim();
+      for (let line = -8; line < 32; line++) {
+        context.beginPath();
+        context.lineWidth = line % 5 === 0 ? 1.5 : .65;
+        context.strokeStyle = line % 5 === 0 ? accent : muted;
+        context.globalAlpha = line % 5 === 0 ? .75 : .26;
+        for (let x = -4; x <= bounds.width + 4; x += 4) {
+          const normalized = x / bounds.width;
+          const hill = Math.exp(-Math.pow((normalized - (.3 + pointer * .3)) * 3.6, 2));
+          const y = line * 10 + Math.sin(normalized * 8 + seed * .7 + line * .16) * 10 - hill * (40 + Math.sin(line * .13 + seed) * 24) + Math.sin(normalized * 17 + seed) * 5;
+          if (x === -4) context.moveTo(x, y); else context.lineTo(x, y);
+        }
+        context.stroke();
+      }
+      context.globalAlpha = 1;
+    };
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(render); };
+    preview.querySelector<HTMLButtonElement>('[data-terrain-shift]')?.addEventListener('click', () => { seed += 1; schedule(); });
+    canvas.addEventListener('pointermove', (event) => {
+      if (reduced.matches || event.pointerType !== 'mouse') return;
+      const bounds = canvas.getBoundingClientRect();
+      pointer = (event.clientX - bounds.left) / bounds.width;
+      schedule();
+    });
+    const resize = new ResizeObserver(schedule);
+    resize.observe(canvas);
+    const theme = new MutationObserver(schedule);
+    theme.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    schedule();
+  }
+</script>

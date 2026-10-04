@@ -1,0 +1,138 @@
+---
+import { server, services } from '../../data/services';
+// Animate the leading number of a fact, keeping its surrounding text (e.g. "91 TB array").
+const counted = (value: string) => {
+  const match = value.match(/^(\D*)(\d+)(.*)$/);
+  return match ? { count: Number(match[2]), before: match[1], after: match[3] } : { count: undefined, before: '', after: '' };
+};
+const stats = [
+  { value: server.containers, label: 'Docker containers', ...counted(server.containers) },
+  { value: server.storage, label: 'Storage', ...counted(server.storage) },
+  { value: server.gpu, label: 'GPU', count: undefined, before: '', after: '' },
+  { value: server.memory.replace(' RAM', ''), label: 'Memory', ...counted(server.memory.replace(' RAM', '')) },
+  { value: 'Unraid', label: server.os.replace('Unraid ', '') + ' / Operating system', count: undefined, before: '', after: '' },
+];
+const half = Math.ceil(services.length / 2);
+const rows = [services.slice(0, half), services.slice(half)];
+---
+<section class="sol-band" aria-labelledby="sol-heading">
+  <div class="container">
+    <div class="sol-heading">
+      <h2 id="sol-heading"><span class="sol-sun" aria-hidden="true">✳</span> SOL by the numbers</h2>
+      <a class="text-link" href="/homelab">Inside the homelab ↗</a>
+    </div>
+    <dl class="sol-stats">
+      {stats.map((stat) => (
+        <div>
+          <dt>{stat.label}</dt>
+          <dd>
+            <span aria-hidden="true" data-sol-count={stat.count} data-before={stat.before} data-after={stat.after}>{stat.value}</span>
+            <span class="screen-reader">{stat.value}</span>
+          </dd>
+        </div>
+      ))}
+    </dl>
+    <div class="ribbon-caption">
+      <p>Real services. One very busy home server.</p>
+      <button type="button" class="ribbon-pause" aria-pressed="false" data-ribbon-toggle><span data-ribbon-action>Pause</span> logo motion</button>
+    </div>
+  </div>
+  <div class="service-ribbon" data-service-ribbon>
+    {rows.map((row, index) => (
+      <div class:list={['ribbon-row', { reverse: index === 1 }]}>
+        <div class="ribbon-track">
+          <ul class="logo-list" aria-label={`SOL services, row ${index + 1}`}>
+            {row.map((service) => (
+              <li><a href="/homelab" aria-label={`Explore ${service.name} in the homelab`}><img src={`/icons/services/${service.icon}`} width="30" height="30" alt="" loading="lazy" decoding="async" /><span>{service.name}</span></a></li>
+            ))}
+          </ul>
+          <ul class="logo-list ribbon-copy" aria-hidden="true">
+            {row.map((service) => (
+              <li><span class="logo-chip"><img src={`/icons/services/${service.icon}`} width="30" height="30" alt="" loading="lazy" decoding="async" /><span>{service.name}</span></span></li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    ))}
+  </div>
+</section>
+
+<style>
+  .sol-band { padding-block: 36px 32px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .sol-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .sol-heading h2 { margin: 0; font-size: 16px; letter-spacing: -.02em; }
+  .sol-sun { color: var(--accent); margin-right: 8px; font-size: 22px; vertical-align: middle; }
+  .sol-heading a { font-size: 12px; }
+  .sol-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 28px 0 32px; }
+  .sol-stats > div { display: flex; flex-direction: column-reverse; gap: 7px; border-left: 1px solid var(--line); padding-inline: 24px 12px; }
+  .sol-stats > div:first-child { border-left: 0; padding-left: 0; }
+  .sol-stats dt { color: var(--muted); font: 10px var(--font-mono); line-height: 1.7; text-transform: uppercase; letter-spacing: .06em; }
+  .sol-stats dd { margin: 0; font-size: clamp(1.3rem, 2.5vw, 2rem); font-weight: 650; letter-spacing: -.04em; line-height: 1.3; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .screen-reader { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  .ribbon-caption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px; }
+  .ribbon-caption p { font-size: 12px; color: var(--muted); margin: 0; }
+  .ribbon-pause { border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 6px; font: 10px var(--font-mono); padding: 9px 12px; cursor: pointer; }
+  .ribbon-pause:hover { color: var(--text); border-color: var(--accent); }
+  .service-ribbon { display: grid; gap: 12px; overflow: hidden; }
+  .ribbon-row { overflow: hidden; padding-block: 6px; }
+  .ribbon-track { display: flex; width: max-content; animation: service-drift 75s linear infinite; }
+  .reverse .ribbon-track { animation-direction: reverse; animation-duration: 85s; }
+  .logo-list { display: flex; list-style: none; gap: 14px; margin: 0; padding: 0 14px 0 0; }
+  .logo-list a, .logo-chip { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 17px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; color: var(--text); text-decoration: none; white-space: nowrap; font-size: 12px; }
+  .logo-list img { display: block; flex-shrink: 0; object-fit: contain; }
+  .logo-list a:hover { border-color: var(--accent); background: var(--soft); }
+  .service-ribbon:hover .ribbon-track, .service-ribbon:focus-within .ribbon-track, .service-ribbon[data-paused] .ribbon-track { animation-play-state: paused; }
+  .service-ribbon:focus-within .ribbon-track { animation: none; }
+  .service-ribbon:focus-within .ribbon-row { overflow-x: auto; }
+  .service-ribbon:focus-within .ribbon-copy { display: none; }
+  @keyframes service-drift { to { transform: translateX(-50%); } }
+  @media (max-width: 750px) { .sol-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 25px 0; } .sol-stats > div { padding-inline: 14px 6px; } .sol-stats > div:nth-child(4) { border-left: 0; padding-left: 0; } .sol-stats dd { font-size: 1.4rem; } }
+  @media (max-width: 410px) { .sol-stats dd { font-size: 1.2rem; } .sol-stats dt { font-size: 9px; } }
+  @media (prefers-reduced-motion: reduce) {
+    .ribbon-pause { display: none; }
+    .ribbon-track, .service-ribbon:focus-within .ribbon-track { width: 100%; animation: none; }
+    .ribbon-row { overflow: visible; }
+    .logo-list { justify-content: center; flex-wrap: wrap; padding: 0 16px; gap: 8px; }
+    .ribbon-copy { display: none; }
+    .logo-list a { padding: 7px 10px; min-height: 44px; font-size: 11px; }
+    .logo-list img { width: 23px; height: 23px; }
+  }
+</style>
+
+<script>
+  const ribbon = document.querySelector<HTMLElement>('[data-service-ribbon]');
+  const toggle = document.querySelector<HTMLButtonElement>('[data-ribbon-toggle]');
+  if (ribbon && toggle) {
+    toggle.addEventListener('click', () => {
+      const paused = toggle.getAttribute('aria-pressed') !== 'true';
+      toggle.setAttribute('aria-pressed', String(paused));
+      ribbon.toggleAttribute('data-paused', paused);
+      const action = toggle.querySelector('[data-ribbon-action]');
+      if (action) action.textContent = paused ? 'Resume' : 'Pause';
+    });
+  }
+  const counters = document.querySelectorAll<HTMLElement>('[data-sol-count]');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (counters.length && !reduced.matches) {
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting || !(entry.target instanceof HTMLElement)) continue;
+        const element = entry.target;
+        observer.unobserve(element);
+        const value = Number(element.dataset.solCount);
+        if (!Number.isFinite(value)) continue;
+        const finalText = element.textContent;
+        const start = performance.now();
+        const tick = (time: number) => {
+          const progress = Math.min(1, (time - start) / 850);
+          if (reduced.matches || progress >= 1) { element.textContent = finalText; return; }
+          const count = Math.round(value * (1 - Math.pow(1 - progress, 3)));
+          element.textContent = `${element.dataset.before ?? ''}${count}${element.dataset.after ?? ''}`;
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+    }, { threshold: .8 });
+    counters.forEach((counter) => observer.observe(counter));
+  }
+</script>

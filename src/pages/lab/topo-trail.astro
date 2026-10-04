@@ -1,0 +1,317 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+<Base title="Topo trail · Lab" description="Generate a topographic contour map, trace a winding trail, and download your own terrain as a PNG. An interactive local canvas experiment.">
+  <section class="container section">
+    <a class="back-link muted" href="/lab/">← Back to the lab</a>
+    <p class="eyebrow">Lab / 002</p>
+    <h1>Find your own <span>way.</span></h1>
+    <p class="experiment-intro muted">A landscape that doesn’t exist. A trail that takes the long way. Generate a little terrain, follow the contours, and see where it leads.</p>
+    <div class="topo-experiment" data-topo-experiment>
+      <div class="canvas-frame">
+        <canvas data-topo-canvas role="img" aria-label="Generative topographic contour map with an optional winding trail. This is imaginary terrain, not a real map."></canvas>
+        <span class="canvas-label" aria-hidden="true">Imaginary terrain / local canvas</span>
+        <div class="map-key" aria-hidden="true"><span><i></i>Contour</span><span><i></i>Trail</span></div>
+      </div>
+      <div class="topo-controls">
+        <div class="action-controls">
+          <button class="button" type="button" data-topo-reseed>New terrain</button>
+          <button class="button secondary" type="button" data-topo-trail aria-pressed="true">Trail on</button>
+          <button class="button secondary" type="button" data-topo-download>Download PNG ↓</button>
+        </div>
+        <label class="density-control"><span>Contour density <output data-topo-density-output>24</output></span><input type="range" data-topo-density min="12" max="40" step="1" value="24" aria-label="Contour density" /></label>
+      </div>
+      <p class="topo-status muted" data-topo-status role="status" aria-live="polite">Preparing your terrain…</p>
+      <noscript><p class="muted">JavaScript is needed to generate the map. Read about the experiment below, or explore the rest of the site without it.</p></noscript>
+    </div>
+    <div class="experiment-notes">
+      <div><p class="eyebrow">01 / The terrain</p><h2>A few rules. Infinite landscapes.</h2><p class="muted">Layers of seeded value noise form an imaginary height field. Each contour follows a constant height, found by intersecting small triangles in the field. Wider gaps feel gentle; close lines suggest steeper ground. There are no real elevations or geographic coordinates.</p></div>
+      <div><p class="eyebrow">02 / The way through</p><h2>Take the scenic route.</h2><p class="muted">The winding trail echoes the mountain path in my logo. Reseed the landscape, change the number of contours, or hide the trail. Download saves exactly the map, without the controls. Everything stays in your browser.</p><p class="muted">With reduced motion enabled, the whole trail appears immediately. All controls work by keyboard; use the arrow keys to adjust density. The map follows the site’s light or dark theme.</p></div>
+    </div>
+  </section>
+</Base>
+<script>
+  let disposeTopo: (() => void) | undefined;
+  function mountTopo() {
+    disposeTopo?.();
+    disposeTopo = undefined;
+    const root = document.querySelector<HTMLElement>('[data-topo-experiment]');
+    if (!root) return;
+    const canvas = root.querySelector<HTMLCanvasElement>('[data-topo-canvas]');
+    const reseed = root.querySelector<HTMLButtonElement>('[data-topo-reseed]');
+    const trailButton = root.querySelector<HTMLButtonElement>('[data-topo-trail]');
+    const download = root.querySelector<HTMLButtonElement>('[data-topo-download]');
+    const densityInput = root.querySelector<HTMLInputElement>('[data-topo-density]');
+    const densityOutput = root.querySelector<HTMLOutputElement>('[data-topo-density-output]');
+    const status = root.querySelector<HTMLElement>('[data-topo-status]');
+    if (!canvas || !reseed || !trailButton || !download || !densityInput || !densityOutput || !status) return;
+    const context = canvas.getContext('2d');
+    const backdrop = document.createElement('canvas');
+    const backgroundContext = backdrop.getContext('2d');
+    if (!context || !backgroundContext) {
+      status.textContent = 'Canvas is unavailable in this browser. The explanation below is still available.';
+      root.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input').forEach(control => { control.disabled = true; });
+      return;
+    }
+    const ctx = context;
+    const background = backgroundContext;
+    const events = new AbortController();
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const seedBuffer = new Uint32Array(1);
+    const trailPoints = new Float32Array(242);
+    const crossingX = new Float64Array(3);
+    const crossingY = new Float64Array(3);
+    let seed = crypto.getRandomValues(seedBuffer)[0];
+    let width = 0;
+    let height = 0;
+    let ratio = 1;
+    let columns = 0;
+    let rows = 0;
+    let field = new Float32Array(0);
+    let density = 24;
+    let showTrail = true;
+    let frame = 0;
+    let inputFrame = 0;
+    let traceStarted = 0;
+    let trailColor = '';
+    let backgroundColor = '';
+    let destroyed = false;
+
+    function lattice(x: number, y: number) {
+      let hash = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ seed;
+      hash = Math.imul(hash ^ (hash >>> 13), 1274126177);
+      return ((hash ^ (hash >>> 16)) >>> 0) / 4294967295 * 2 - 1;
+    }
+    function noise(x: number, y: number) {
+      const ix = Math.floor(x);
+      const iy = Math.floor(y);
+      const fx = x - ix;
+      const fy = y - iy;
+      const sx = fx * fx * (3 - 2 * fx);
+      const sy = fy * fy * (3 - 2 * fy);
+      const top = lattice(ix, iy) * (1 - sx) + lattice(ix + 1, iy) * sx;
+      const bottom = lattice(ix, iy + 1) * (1 - sx) + lattice(ix + 1, iy + 1) * sx;
+      return top * (1 - sy) + bottom * sy;
+    }
+    function buildField() {
+      columns = Math.max(32, Math.ceil(width / 9));
+      rows = Math.max(32, Math.ceil(height / 9));
+      field = new Float32Array((columns + 1) * (rows + 1));
+      const aspect = width / height;
+      for (let y = 0; y <= rows; y++) {
+        for (let x = 0; x <= columns; x++) {
+          const nx = x / columns * 3.4 * aspect;
+          const ny = y / rows * 3.4;
+          field[y * (columns + 1) + x] = .5 + noise(nx, ny) * .27 + noise(nx * 2 + 17, ny * 2 + 9) * .14 + noise(nx * 4 + 7, ny * 4 + 23) * .07 + noise(nx * 8 + 31, ny * 8 + 11) * .035;
+        }
+      }
+      const phase = (seed % 1000) / 1000 * Math.PI * 2;
+      for (let point = 0; point <= 120; point++) {
+        const t = point / 120;
+        trailPoints[point * 2] = width * (.5 + Math.sin(t * Math.PI * 3.4 + phase) * .19 + Math.sin(t * Math.PI * 7.5 - phase) * .045);
+        trailPoints[point * 2 + 1] = height * (.86 - t * .72);
+      }
+    }
+    // Splitting each grid cell into two triangles resolves saddle cases without
+    // ambiguous contour connections. Intersections are reused across all cells.
+    function crossing(level: number, index: number, x1: number, y1: number, v1: number, x2: number, y2: number, v2: number) {
+      if ((v1 >= level) === (v2 >= level)) return index;
+      const t = (level - v1) / (v2 - v1);
+      crossingX[index] = x1 + (x2 - x1) * t;
+      crossingY[index] = y1 + (y2 - y1) * t;
+      return index + 1;
+    }
+    function triangle(path: Path2D, level: number, ax: number, ay: number, av: number, bx: number, by: number, bv: number, cx: number, cy: number, cv: number) {
+      let count = crossing(level, 0, ax, ay, av, bx, by, bv);
+      count = crossing(level, count, bx, by, bv, cx, cy, cv);
+      count = crossing(level, count, cx, cy, cv, ax, ay, av);
+      if (count === 2) {
+        path.moveTo(crossingX[0], crossingY[0]);
+        path.lineTo(crossingX[1], crossingY[1]);
+      }
+    }
+    function buildBackdrop() {
+      const styles = getComputedStyle(document.documentElement);
+      backgroundColor = styles.getPropertyValue('--bg').trim();
+      trailColor = styles.getPropertyValue('--text').trim();
+      background.globalAlpha = 1;
+      background.fillStyle = backgroundColor;
+      background.fillRect(0, 0, width, height);
+      const minor = new Path2D();
+      const major = new Path2D();
+      const dx = width / columns;
+      const dy = height / rows;
+      for (let contour = 0; contour < density; contour++) {
+        const level = .15 + contour / (density - 1) * .7;
+        const path = contour % 4 === 0 ? major : minor;
+        for (let y = 0; y < rows; y++) {
+          const ay = y * dy;
+          const by = (y + 1) * dy;
+          for (let x = 0; x < columns; x++) {
+            const ax = x * dx;
+            const bx = (x + 1) * dx;
+            const index = y * (columns + 1) + x;
+            const a = field[index];
+            const b = field[index + 1];
+            const c = field[index + columns + 2];
+            const d = field[index + columns + 1];
+            triangle(path, level, ax, ay, a, bx, ay, b, bx, by, c);
+            triangle(path, level, ax, ay, a, bx, by, c, ax, by, d);
+          }
+        }
+      }
+      background.strokeStyle = styles.getPropertyValue('--accent').trim();
+      background.lineWidth = .8;
+      background.globalAlpha = .4;
+      background.stroke(minor);
+      background.lineWidth = 1.2;
+      background.globalAlpha = .75;
+      background.stroke(major);
+      background.globalAlpha = 1;
+    }
+    function draw(progress = 1) {
+      ctx.clearRect(0, 0, width, height);
+      ctx.drawImage(backdrop, 0, 0, width, height);
+      if (!showTrail) return;
+      const end = Math.min(120, Math.floor(progress * 120));
+      ctx.beginPath();
+      ctx.moveTo(trailPoints[0], trailPoints[1]);
+      for (let point = 1; point <= end; point++) ctx.lineTo(trailPoints[point * 2], trailPoints[point * 2 + 1]);
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = backgroundColor;
+      ctx.lineWidth = 6;
+      ctx.stroke();
+      ctx.strokeStyle = trailColor;
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+      for (let endpoint = 0; endpoint < 2; endpoint++) {
+        const point = endpoint === 0 ? 0 : end;
+        ctx.beginPath();
+        ctx.arc(trailPoints[point * 2], trailPoints[point * 2 + 1], point === 0 ? 4 : 5, 0, Math.PI * 2);
+        ctx.fillStyle = backgroundColor;
+        ctx.fill();
+        ctx.strokeStyle = trailColor;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+    function stopTrace() { cancelAnimationFrame(frame); frame = 0; traceStarted = 0; }
+    function trace(time: number) {
+      frame = 0;
+      if (destroyed) return;
+      if (!traceStarted) traceStarted = time;
+      const progress = Math.min(1, (time - traceStarted) / 1400);
+      draw(progress);
+      if (progress < 1) frame = requestAnimationFrame(trace);
+    }
+    function render(animate = false) {
+      stopTrace();
+      buildBackdrop();
+      if (animate && showTrail && !motion.matches && !document.hidden) {
+        draw(0);
+        frame = requestAnimationFrame(trace);
+      } else draw();
+    }
+    function resize() {
+      const bounds = canvas!.getBoundingClientRect();
+      const nextWidth = Math.round(bounds.width);
+      const nextHeight = Math.round(bounds.height);
+      const nextRatio = Math.min(window.devicePixelRatio || 1, 2);
+      if (nextWidth <= 0 || nextHeight <= 0 || (nextWidth === width && nextHeight === height && nextRatio === ratio)) return;
+      width = nextWidth;
+      height = nextHeight;
+      ratio = nextRatio;
+      canvas!.width = backdrop.width = Math.round(width * ratio);
+      canvas!.height = backdrop.height = Math.round(height * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      background.setTransform(ratio, 0, 0, ratio, 0, 0);
+      buildField();
+      render();
+    }
+    reseed.addEventListener('click', () => {
+      seed = crypto.getRandomValues(seedBuffer)[0];
+      buildField();
+      render(true);
+      status.textContent = 'New imaginary terrain generated. Adjust the contours or download your map.';
+    }, { signal: events.signal });
+    densityInput.addEventListener('input', () => {
+      density = Number(densityInput.value);
+      densityOutput.value = String(density);
+      densityInput.setAttribute('aria-valuetext', `${density} contour levels`);
+      if (!inputFrame) inputFrame = requestAnimationFrame(() => { inputFrame = 0; render(); });
+    }, { signal: events.signal });
+    trailButton.addEventListener('click', () => {
+      showTrail = !showTrail;
+      trailButton.setAttribute('aria-pressed', String(showTrail));
+      trailButton.textContent = showTrail ? 'Trail on' : 'Trail off';
+      stopTrace();
+      draw();
+      status.textContent = showTrail ? 'The trail is visible.' : 'Trail hidden. Explore the contours on their own.';
+    }, { signal: events.signal });
+    download.addEventListener('click', () => {
+      stopTrace();
+      if (inputFrame) { cancelAnimationFrame(inputFrame); inputFrame = 0; render(); }
+      draw();
+      canvas.toBlob(blob => {
+        if (!blob || destroyed) {
+          if (!destroyed) status.textContent = 'The PNG could not be created. Try generating new terrain.';
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `topo-trail-${seed.toString(16)}.png`;
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        status.textContent = 'Your PNG is ready. The download contains the map only.';
+      }, 'image/png');
+    }, { signal: events.signal });
+    motion.addEventListener('change', () => { if (motion.matches) { stopTrace(); draw(); } }, { signal: events.signal });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { stopTrace(); draw(); } }, { signal: events.signal });
+    window.addEventListener('resize', resize, { signal: events.signal });
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(canvas);
+    const themeObserver = new MutationObserver(() => { if (width && height) render(); });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    resize();
+    if (!motion.matches && showTrail) { draw(0); frame = requestAnimationFrame(trace); }
+    status.textContent = 'Imaginary terrain ready. New terrain changes the seed; arrow keys adjust density.';
+    disposeTopo = () => {
+      destroyed = true;
+      stopTrace();
+      cancelAnimationFrame(inputFrame);
+      resizeObserver.disconnect();
+      themeObserver.disconnect();
+      events.abort();
+    };
+  }
+  mountTopo();
+  document.addEventListener('astro:page-load', mountTopo);
+  document.addEventListener('astro:before-swap', () => disposeTopo?.());
+  window.addEventListener('pagehide', () => disposeTopo?.());
+  window.addEventListener('pageshow', event => { if (event.persisted) mountTopo(); });
+</script>
+<style>
+  .back-link { display: inline-block; margin-bottom: 2rem; text-decoration: none; }
+  .experiment-intro { max-width: 44rem; font-size: 1.15rem; }
+  .topo-experiment { margin-top: 2.5rem; }
+  .canvas-frame { position: relative; border: 1px solid var(--line); border-radius: 1rem; overflow: hidden; background: var(--bg); }
+  canvas { display: block; width: 100%; height: clamp(360px, 55vw, 650px); }
+  .canvas-label { position: absolute; top: 1rem; left: 1rem; color: var(--muted); font: 9px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; background: var(--bg); border: 1px solid var(--line); padding: .5rem .7rem; border-radius: 4px; pointer-events: none; }
+  .map-key { position: absolute; bottom: 1rem; right: 1rem; display: flex; gap: 18px; padding: .5rem .7rem; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; font: 9px var(--font-mono); color: var(--muted); pointer-events: none; }
+  .map-key span { display: flex; align-items: center; gap: 7px; }
+  .map-key i { width: 18px; height: 1px; background: var(--accent); }
+  .map-key span:last-child i { background: var(--text); height: 2px; }
+  .topo-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 1.5rem 2rem; padding-top: 1.5rem; }
+  .action-controls { display: flex; flex-wrap: wrap; gap: .65rem; }
+  .action-controls button { cursor: pointer; }
+  .density-control { flex: 1; max-width: 320px; min-width: 180px; display: grid; gap: .4rem; font-size: .85rem; font-weight: 600; }
+  .density-control span { display: flex; justify-content: space-between; gap: 1rem; }
+  .density-control output { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .density-control input { width: 100%; min-height: 44px; margin: 0; cursor: pointer; accent-color: var(--accent); }
+  .topo-status { font-size: .85rem; min-height: 2.5em; margin-top: 1rem; }
+  .experiment-notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3rem; padding-top: 2.5rem; margin-top: 1.5rem; border-top: 1px solid var(--line); }
+  .experiment-notes h2 { font-size: 1.4rem; margin-top: 1rem; letter-spacing: -.03em; }
+  @media (max-width: 650px) { .experiment-notes { grid-template-columns: 1fr; gap: 1.5rem; } .topo-controls { gap: 1.25rem; } .action-controls { width: 100%; } .density-control { max-width: none; } .action-controls button { font-size: 12px; padding: 12px 14px; } .canvas-label { font-size: 8px; } }
+</style>

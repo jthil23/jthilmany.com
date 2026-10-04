@@ -1,0 +1,74 @@
+---
+const modules = ['adguard', 'f1-extended', 'finance', 'frigate', 'github', 'homeassistant', 'news', 'plex', 'steam', 'system', 'weather'];
+const lines = ['> cron → main-scraper', '> dispatch scraper modules', ...modules.map(name => `  module / ${name}`), '> MariaDB → web dashboard'];
+---
+<figure class="scraper-visual" data-scraper-illustration>
+  <div class="terminal">
+    <div class="terminal-bar"><span class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>main-scraper / sequence study</span></div>
+    <div class="terminal-output" role="img" aria-label={`Illustration of a cron-start sequence dispatching the real scraper modules: ${modules.join(', ')}; data flows to MariaDB and the web dashboard. Not live logs.`}>
+      {lines.map((line, index) => <div class="terminal-line" aria-hidden="true" style={`--delay: ${index * .38}s`}><span>{line}</span></div>)}
+      <span class="terminal-caret" aria-hidden="true">▍</span>
+    </div>
+    <div class="terminal-footer"><span>TypeScript · cron · MariaDB</span><button type="button" data-typing-toggle aria-pressed="false" hidden>Pause typing</button></div>
+  </div>
+  <figcaption>Sequence illustration · real modules, not a running job.</figcaption>
+</figure>
+<script>
+  let cleanupScraper: (() => void) | undefined;
+  function mountScraper() {
+    cleanupScraper?.();
+    const root = document.querySelector<HTMLElement>('[data-scraper-illustration]');
+    const button = root?.querySelector<HTMLButtonElement>('[data-typing-toggle]');
+    if (!root || !button) return;
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const events = new AbortController();
+    root.classList.remove('typing-started', 'typing-paused');
+    root.classList.toggle('typing-waiting', !motion.matches);
+    function updateMotion() {
+      button!.hidden = motion.matches;
+      if (motion.matches) root!.classList.remove('typing-waiting');
+    }
+    updateMotion();
+    const observer = new IntersectionObserver(entries => {
+      if (!entries.some(entry => entry.isIntersecting)) return;
+      root.classList.remove('typing-waiting');
+      if (!motion.matches) root.classList.add('typing-started');
+      observer.disconnect();
+    }, { threshold: .2 });
+    observer.observe(root);
+    motion.addEventListener('change', updateMotion, { signal: events.signal });
+    button.addEventListener('click', () => {
+      const paused = root.classList.toggle('typing-paused');
+      button.setAttribute('aria-pressed', String(paused));
+      button.textContent = paused ? 'Resume typing' : 'Pause typing';
+    }, { signal: events.signal });
+    cleanupScraper = () => { observer.disconnect(); events.abort(); };
+  }
+  mountScraper();
+  document.addEventListener('astro:page-load', mountScraper);
+  document.addEventListener('astro:before-swap', () => cleanupScraper?.());
+</script>
+<style>
+  .scraper-visual { margin: 0; min-width: 0; }
+  .terminal { border: 1px solid var(--line); background: var(--bg); border-radius: 12px; overflow: hidden; box-shadow: 0 25px 65px var(--ambient); }
+  .terminal-bar { display: flex; align-items: center; gap: 18px; padding: 14px 18px; background: var(--panel); border-bottom: 1px solid var(--line); color: var(--muted); font: 10px var(--font-mono); }
+  .terminal-dots { display: flex; gap: 5px; flex: 0 0 auto; }
+  .terminal-dots i { height: 6px; width: 6px; border-radius: 50%; background: var(--line); }
+  .terminal-dots i:last-child { background: var(--accent); }
+  .terminal-output { font: 12px/1.75 var(--font-mono); padding: 25px 25px 12px; color: var(--accent); }
+  .terminal-line { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .terminal-line span { display: inline-block; max-width: 100%; }
+  .typing-waiting .terminal-line span { clip-path: inset(0 100% 0 0); }
+  .typing-started .terminal-line span { animation: type-line .36s steps(24, end) var(--delay) both; }
+  .terminal-line:first-child { color: var(--text); }
+  .terminal-line:nth-child(2), .terminal-line:last-of-type { color: var(--muted); }
+  .terminal-caret { color: var(--accent); }
+  .terminal-footer { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--line); font: 9px var(--font-mono); color: var(--muted); }
+  .terminal-footer button { padding: 8px 10px; min-height: 36px; border-radius: 4px; border: 1px solid var(--line); color: var(--text); background: var(--panel); cursor: pointer; font: 10px var(--font-mono); }
+  .terminal-footer button[hidden] { display: none; }
+  .typing-paused .terminal-line span { animation-play-state: paused; }
+  figcaption { margin-top: 16px; font: 10px var(--font-mono); color: var(--muted); text-align: center; }
+  @keyframes type-line { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+  @media (prefers-reduced-motion: reduce) { .typing-started .terminal-line span { animation: none; } .typing-waiting .terminal-line span { clip-path: none; } .terminal-footer button { display: none; } }
+  @media (max-width: 600px) { .terminal-output { padding: 20px 17px 12px; font-size: 11px; } .terminal-bar { gap: 12px; padding-inline: 14px; font-size: 9px; } }
+</style>

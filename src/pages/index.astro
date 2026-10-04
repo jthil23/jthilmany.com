@@ -1,0 +1,246 @@
+---
+import Base from '../layouts/Base.astro';
+import HomeHero from '../components/home/HomeHero.astro';
+import SOLStrip from '../components/home/SOLStrip.astro';
+import TerrainPreview from '../components/home/TerrainPreview.astro';
+import { site } from '../data/site';
+import { projects } from '../data/projects';
+import { services, mediaPipeline, smartHomePipeline, serviceBySlug } from '../data/services';
+import { getCollection } from 'astro:content';
+
+const notes = (await getCollection('notes'))
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime())
+  .slice(0, 2);
+const commandCenter = projects.find((project) => project.title === 'Command Center');
+const scraper = projects.find((project) => project.title === 'Main Scraper');
+const f1 = projects.find((project) => project.title === 'F1 Dashboard');
+const modules = ['adguard', 'f1-extended', 'finance', 'frigate', 'github', 'homeassistant', 'news', 'plex', 'steam', 'system', 'weather'];
+const views = [
+  { name: 'Containers', label: 'Container health grid', services: services.slice(0, 8) },
+  { name: 'Media', label: 'The media pipeline', services: mediaPipeline.map((item) => serviceBySlug(item.slug)) },
+  { name: 'Automations', label: 'Smart home automations', services: smartHomePipeline.map((item) => serviceBySlug(item.slug)) },
+];
+const routes = ['standings', 'results', 'qualifying', 'next race', 'live', 'predictions', 'head-to-head', 'battles', 'admin'];
+---
+<Base title="Home" description={site.description}>
+  <HomeHero />
+  <SOLStrip />
+  <div class="container home-body">
+    <section class="about-row reveal" aria-labelledby="about-heading">
+      <div><p class="eyebrow">Behind the screen</p><h2 id="about-heading">Hi, I'm Jeff.<br /><span>Curiosity is the common thread.</span></h2></div>
+      <p>{site.about}</p>
+    </section>
+
+    <section class="home-paths" aria-labelledby="paths-heading">
+      <div class="paths-heading reveal">
+        <div><p class="eyebrow">Different contexts. The same curiosity.</p><h2 id="paths-heading">A few things I’m building into.</h2></div>
+        <span class="index-marker" aria-hidden="true">WORK / CODE / PLAY</span>
+      </div>
+      <div class="home-bento">
+        <article class="bento-tile work-tile reveal" aria-labelledby="work-heading">
+          <p class="eyebrow">01 / Professional focus</p>
+          <div class="work-symbol" aria-hidden="true"><span>{'{'}</span><svg viewBox="0 0 100 100" width="100" height="100" fill="none"><path d="M12 66 36 42 53 57 87 23" stroke="var(--accent)" stroke-width="2" /><path d="M12 80 36 56 53 71 87 37" stroke="var(--line)" stroke-width="2" /><circle cx="36" cy="42" r="4" fill="var(--accent)" /><circle cx="53" cy="57" r="4" fill="var(--accent)" /><path d="M73 23h14v14" stroke="var(--accent)" stroke-width="2" /></svg><span>{'}'}</span></div>
+          <h3 id="work-heading">Less friction.<br />More possibility.</h3>
+          <p>Business Solutions Analyst at AbbVie, focused on Power Platform, .NET development, business process automation, and AI-assisted software engineering.</p>
+          <div class="skill-lines"><span>Business solutions</span><span>Practical automation</span><span>AI-assisted engineering</span></div>
+          <a class="text-link tile-link" href="/work">The professional side ↗</a>
+        </article>
+
+        <article class="bento-tile command-tile reveal" aria-labelledby="command-heading">
+          <div class="tile-topline"><p class="eyebrow">02 / Personal project</p><span class="stack-label">Next.js · Prisma · Docker</span></div>
+          <h3 id="command-heading">Command Center</h3>
+          <p>A single pane of glass for SOL. Containers, media, storage, and automations, brought together in one interface.</p>
+          <figure class="dashboard-illustration" aria-label="Command Center interface illustration, not live server telemetry" data-home-dashboard>
+            <div class="dashboard-bar"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>SOL / Command Center</span><span class="mock-label">Illustration</span></div>
+            <div class="dashboard-inner">
+              <div class="dashboard-side" aria-hidden="true"><span class="sidebar-word">SOL</span><span>Dashboard</span><span>Containers</span><span>Media</span><span>Storage</span><span>Automations</span><span>System</span></div>
+              <div class="dashboard-main">
+                <div class="mock-stat-row" aria-hidden="true">{['Containers', 'Storage', 'GPU'].map((label) => <div><span>{label}</span><i></i><b></b></div>)}</div>
+                <div class="dashboard-views" aria-label="Choose an illustrated dashboard view">{views.map((view, index) => <button type="button" data-home-view={view.name} aria-pressed={index === 0 ? 'true' : 'false'} aria-controls={`home-view-${view.name.toLowerCase()}`}>{view.name}</button>)}</div>
+                {views.map((view, index) => (
+                  <div id={`home-view-${view.name.toLowerCase()}`} class="mock-service-panel" data-home-panel={view.name} hidden={index !== 0}>
+                    <p>{view.label}</p>
+                    <div class="mock-service-grid">{view.services.map((service) => <div><img src={`/icons/services/${service.icon}`} width="26" height="26" alt="" loading="lazy" decoding="async" /><span>{service.name}</span></div>)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <figcaption>Interface study · abstract shapes, not live metrics or service status.</figcaption>
+          </figure>
+          <div class="tile-links"><a class="text-link" href="/projects">Explore the project ↗</a>{commandCenter?.href && <a class="source-link" href={commandCenter.href}>View source ↗</a>}</div>
+        </article>
+
+        <article class="bento-tile scraper-tile reveal" aria-labelledby="scraper-heading">
+          <p class="eyebrow">03 / Data, on a schedule</p>
+          <h3 id="scraper-heading">Main Scraper</h3>
+          <p>One TypeScript scheduler. Eleven scraper modules. A web dashboard and MariaDB tying the data together.</p>
+          <div class="terminal-panel" aria-label="Illustration listing the real Main Scraper modules">
+            <div class="terminal-header"><span aria-hidden="true">~/main-scraper</span><span>Module map</span></div>
+            <p class="terminal-comment">// Integrations, not a live run log</p>
+            <ul class="module-list">{modules.map((module) => <li><span aria-hidden="true">↳</span> {module}</li>)}</ul>
+            <div class="terminal-flow"><span>cron</span><span aria-hidden="true">→</span><span>scrapers</span><span aria-hidden="true">→</span><span>MariaDB</span></div>
+          </div>
+          <div class="tile-links"><a class="text-link" href="/projects">Follow the data ↗</a>{scraper?.href && <a class="source-link" href={scraper.href}>View source ↗</a>}</div>
+        </article>
+
+        <article class="bento-tile f1-tile reveal" aria-labelledby="f1-heading">
+          <div class="tile-topline"><p class="eyebrow">04 / Personal project</p><span class="f1-stripes" aria-hidden="true"></span></div>
+          <h3 id="f1-heading">F1 Dashboard</h3>
+          <p>Race-weekend curiosity, turned into a Next.js dashboard. From qualifying to head-to-head comparisons.</p>
+          <div class="race-illustration" role="img" aria-label="Abstract racing-line illustration, not a real circuit or race data">
+            <svg viewBox="0 0 540 230" fill="none" aria-hidden="true" focusable="false">
+              <defs><pattern id="home-race-grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" stroke="var(--line)" stroke-width=".5" /></pattern></defs>
+              <path fill="url(#home-race-grid)" d="M0 0h540v230H0Z" />
+              <path d="M-25 189H110C140 189 157 179 170 151L210 68C226 35 252 29 278 49L327 86C345 100 364 100 384 82L415 54C444 28 482 38 488 66S471 121 451 141L399 199C382 218 395 244 427 244H570" stroke="var(--soft)" stroke-width="32" />
+              <path d="M-25 189H110C140 189 157 179 170 151L210 68C226 35 252 29 278 49L327 86C345 100 364 100 384 82L415 54C444 28 482 38 488 66S471 121 451 141L399 199C382 218 395 244 427 244H570" stroke="var(--line)" stroke-width="1" />
+              <path d="M-25 191H110C138 191 146 173 157 149L203 67C223 27 256 34 280 54L328 91C348 108 373 102 392 85L423 60C449 40 475 47 477 70S460 119 441 139L391 194C365 224 390 256 427 256H570" stroke="var(--accent)" stroke-width="3" />
+              <path d="m32 173 8 8-8 8m13-16 8 8-8 8" stroke="var(--accent)" stroke-width="2" />
+              <circle cx="244" cy="43" r="6" fill="var(--accent)" /><circle cx="244" cy="43" r="13" stroke="var(--accent)" stroke-opacity=".3" />
+              <text x="16" y="26" fill="var(--muted)" font-family="var(--font-mono)" font-size="9">RACING LINE / ABSTRACT STUDY</text>
+            </svg>
+          </div>
+          <ul class="route-list" aria-label="F1 Dashboard routes">{routes.map((route) => <li>{route}</li>)}</ul>
+          <div class="tile-links"><a class="text-link" href="/projects">Explore the dashboard ↗</a>{f1?.href && <a class="source-link" href={f1.href}>View source ↗</a>}</div>
+        </article>
+
+        <article class="bento-tile lab-tile reveal" aria-labelledby="lab-heading">
+          <p class="eyebrow">05 / The experimental corner</p>
+          <h3 id="lab-heading">Less plan.<br />More “what if?”</h3>
+          <p>Small browser experiments in movement, patterns, and possibility. Try reshaping this little landscape.</p>
+          <TerrainPreview />
+          <a class="text-link tile-link" href="/lab">Enter the lab ↗</a>
+        </article>
+
+        <article class="bento-tile notes-tile reveal" aria-labelledby="notes-heading">
+          <p class="eyebrow">06 / Learning in the open</p>
+          <div class="notebook-mark" aria-hidden="true">//</div>
+          <h3 id="notes-heading">Field notes.</h3>
+          <p>Ideas worth keeping. Things learned along the way.</p>
+          <div class="home-note-list">{notes.map((note) => <article><time datetime={note.data.date.toISOString()}>{note.data.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })}</time><h4><a href={`/notes/${note.id}`}>{note.data.title}</a></h4><p>{note.data.description}</p></article>)}</div>
+          <a class="text-link tile-link" href="/notes">All field notes ↗</a>
+        </article>
+
+        <article class="bento-tile connect-tile reveal" aria-labelledby="connect-heading">
+          <p class="eyebrow">07 / Elsewhere</p>
+          <svg class="connect-art" viewBox="0 0 160 120" fill="none" width="160" height="120" aria-hidden="true"><path d="M22 60h116M80 10v100M39 19l82 82M39 101l82-82" stroke="var(--line)" /><circle cx="80" cy="60" r="38" stroke="var(--line)" /><circle cx="80" cy="60" r="20" fill="var(--soft)" stroke="var(--accent)" /><circle cx="80" cy="60" r="5" fill="var(--accent)" /><circle cx="22" cy="60" r="5" fill="var(--accent)" /><circle cx="121" cy="19" r="5" fill="var(--accent)" /><circle cx="121" cy="101" r="5" fill="var(--accent)" /></svg>
+          <h3 id="connect-heading">Let's connect.</h3>
+          <p>The code on GitHub.<br />The professional context on LinkedIn.</p>
+          <div class="social-links">{site.socials.map((social) => <a href={social.url} rel="me"><span>{social.label}</span><span aria-hidden="true">↗</span></a>)}</div>
+          <button class="explore-shortcut" type="button" data-open-palette aria-haspopup="dialog"><span>Find your next stop</span><kbd>⌘ K</kbd></button>
+        </article>
+      </div>
+    </section>
+    <div class="closing-line reveal" aria-hidden="true"><span>Build • Solve • Explore • Repeat</span><span>See you on the next trail.</span></div>
+  </div>
+</Base>
+
+<style>
+  .home-body { padding-bottom: 20px; }
+  .about-row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 60px; padding-block: 66px; border-bottom: 1px solid var(--line); align-items: start; }
+  .about-row h2 { font-size: clamp(1.6rem, 2.5vw, 2rem); margin: 0; }
+  .about-row h2 span { color: var(--muted); }
+  .about-row > p { font-size: 17px; color: var(--muted); margin: 0; max-width: 43rem; }
+  .about-row .eyebrow { margin-bottom: 14px; }
+  .home-paths { padding-top: 66px; }
+  .paths-heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 30px; }
+  .paths-heading h2 { margin: 0; }
+  .paths-heading .eyebrow { margin-bottom: 14px; }
+  .index-marker { font: 10px var(--font-mono); color: var(--muted); white-space: nowrap; margin-bottom: 6px; }
+  .home-bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 20px; }
+  .bento-tile { position: relative; display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line); border-radius: 18px; padding: 28px; background: var(--panel); overflow: hidden; }
+  .bento-tile > p:not(.eyebrow) { color: var(--muted); font-size: 14px; }
+  .bento-tile .eyebrow { font-size: 10px; margin-bottom: 20px; }
+  .bento-tile h3 { font-size: 1.8rem; margin-bottom: 15px; }
+  .tile-link { margin-top: auto; font-size: 13px; }
+  .tile-links { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; margin-top: auto; padding-top: 20px; }
+  .tile-links .text-link { font-size: 13px; }
+  .source-link { color: var(--muted); font: 10px var(--font-mono); }
+  .tile-topline { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .stack-label { color: var(--muted); font: 9px var(--font-mono); padding-top: 3px; }
+  .work-tile { grid-column: span 4; background: linear-gradient(155deg, var(--soft), var(--panel) 65%); }
+  .work-symbol { display: flex; align-items: center; justify-content: center; gap: 17px; color: var(--accent); height: 125px; margin-bottom: 24px; }
+  .work-symbol > span { color: var(--line); font: 86px var(--font-mono); font-weight: 200; }
+  .skill-lines { display: grid; gap: 0; border-top: 1px solid var(--line); margin-block: 8px 25px; }
+  .skill-lines span { border-bottom: 1px solid var(--line); padding-block: 12px; font: 11px var(--font-mono); color: var(--muted); }
+  .skill-lines span::before { content: '↳'; color: var(--accent); margin-right: 8px; }
+  .command-tile { grid-column: span 8; }
+  .dashboard-illustration { margin: 6px 0 0; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); overflow: hidden; }
+  .dashboard-bar { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); font: 9px var(--font-mono); color: var(--muted); }
+  .window-dots { display: flex; gap: 4px; }
+  .window-dots i { width: 5px; height: 5px; background: var(--line); border-radius: 50%; }
+  .mock-label { margin-left: auto; font-size: 8px; text-transform: uppercase; }
+  .dashboard-inner { display: grid; grid-template-columns: 100px minmax(0, 1fr); min-height: 254px; }
+  .dashboard-side { display: flex; flex-direction: column; gap: 15px; padding: 20px 12px; border-right: 1px solid var(--line); color: var(--muted); font-size: 8px; }
+  .dashboard-side .sidebar-word { font: 15px var(--font-mono); color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+  .dashboard-side span:nth-child(2) { color: var(--accent); }
+  .dashboard-main { padding: 16px; min-width: 0; }
+  .mock-stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 17px; }
+  .mock-stat-row > div { border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: var(--panel); }
+  .mock-stat-row span { display: block; color: var(--muted); font-size: 8px; }
+  .mock-stat-row i { display: block; width: 54%; height: 8px; background: var(--soft); border-radius: 2px; margin-block: 8px 6px; }
+  .mock-stat-row b { display: block; width: 75%; height: 3px; background: var(--line); border-radius: 2px; }
+  .dashboard-views { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 12px; }
+  .dashboard-views button { border: 1px solid transparent; padding: 7px 9px; border-radius: 4px; background: transparent; color: var(--muted); font: 9px var(--font-mono); cursor: pointer; }
+  .dashboard-views button[aria-pressed='true'] { border-color: var(--line); background: var(--soft); color: var(--accent); }
+  .dashboard-views button:hover { color: var(--text); }
+  .mock-service-panel { min-height: 180px; }
+  .mock-service-panel > p { margin-bottom: 9px; font-size: 9px; color: var(--muted); }
+  .mock-service-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .mock-service-grid > div { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 10px 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+  .mock-service-grid img { display: block; object-fit: contain; }
+  .mock-service-grid span { font-size: 8px; color: var(--muted); text-align: center; line-height: 1.35; overflow-wrap: anywhere; }
+  .dashboard-illustration figcaption { padding: 9px 14px; border-top: 1px solid var(--line); color: var(--muted); font: 8px var(--font-mono); line-height: 1.6; }
+  .scraper-tile { grid-column: span 6; background: var(--bg); border-radius: 18px 18px 6px 18px; }
+  .terminal-panel { margin-top: 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); overflow: hidden; }
+  .terminal-header { display: flex; justify-content: space-between; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--line); font: 9px var(--font-mono); color: var(--muted); }
+  .terminal-header span:first-child { color: var(--accent); }
+  .terminal-comment { color: var(--muted); font: 10px var(--font-mono); margin: 16px 16px 12px; }
+  .module-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; list-style: none; margin: 0; padding: 0 16px 16px; color: var(--text); font: 11px var(--font-mono); }
+  .module-list span { color: var(--accent); }
+  .terminal-flow { display: flex; align-items: center; flex-wrap: wrap; gap: 13px; padding: 12px 16px; border-top: 1px solid var(--line); color: var(--accent); font: 10px var(--font-mono); background: var(--bg); }
+  .f1-tile { grid-column: span 6; background: linear-gradient(125deg, var(--panel), var(--soft)); border-radius: 18px 18px 18px 6px; }
+  .f1-stripes { width: 52px; height: 16px; background: repeating-linear-gradient(120deg, transparent 0 6px, var(--accent) 6px 11px); }
+  .race-illustration { margin: 2px -28px 10px; }
+  .race-illustration svg { display: block; width: 100%; height: 210px; }
+  .route-list { display: flex; flex-wrap: wrap; list-style: none; padding: 0; margin: 4px 0 0; gap: 7px; }
+  .route-list li { border: 1px solid var(--line); background: var(--bg); padding: 5px 8px; font: 9px var(--font-mono); color: var(--muted); border-radius: 4px; }
+  .lab-tile { grid-column: span 5; padding: 26px; }
+  .notes-tile { grid-column: span 4; background: repeating-linear-gradient(0deg, transparent 0 31px, var(--ice) 31px 32px), var(--panel); }
+  .notebook-mark { color: var(--line); font: 70px var(--font-mono); line-height: 1; margin-block: 4px 20px; letter-spacing: -.15em; }
+  .home-note-list { margin-bottom: 20px; }
+  .home-note-list article { border-top: 1px solid var(--line); padding-block: 17px 0; }
+  .home-note-list time { font: 9px var(--font-mono); color: var(--accent); }
+  .home-note-list h4 { margin: 9px 0 8px; line-height: 1.4; font-size: 14px; }
+  .home-note-list h4 a { color: var(--text); text-decoration: none; }
+  .home-note-list h4 a:hover { color: var(--accent); text-decoration: underline; }
+  .home-note-list p { color: var(--muted); font-size: 12px; line-height: 1.65; }
+  .connect-tile { grid-column: span 3; background: var(--soft); }
+  .connect-art { display: block; align-self: center; margin-block: 6px 28px; }
+  .connect-tile h3 { font-size: 1.7rem; }
+  .social-links { display: grid; margin-block: auto 22px; }
+  .social-links a { display: flex; align-items: center; justify-content: space-between; min-height: 52px; border-bottom: 1px solid var(--line); color: var(--text); text-decoration: none; font-size: 14px; }
+  .social-links a:hover { color: var(--accent); }
+  .social-links a span:last-child { color: var(--accent); }
+  .explore-shortcut { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border: 0; background: transparent; padding: 0; color: var(--muted); text-align: left; font: 9px var(--font-mono); cursor: pointer; }
+  .explore-shortcut kbd { padding: 4px 5px; border: 1px solid var(--line); border-radius: 4px; font: inherit; }
+  .closing-line { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 18px; padding-block: 38px 10px; color: var(--muted); font: 10px var(--font-mono); }
+  .closing-line span:first-child { color: var(--accent); }
+  @media (max-width: 1000px) { .bento-tile { padding: 24px; } .work-tile { grid-column: span 5; } .command-tile { grid-column: span 7; } .dashboard-inner { grid-template-columns: 72px minmax(0, 1fr); } .dashboard-side { padding-inline: 9px; font-size: 7px; } .dashboard-main { padding: 12px; } .mock-service-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .lab-tile { grid-column: span 6; padding: 26px; } .notes-tile { grid-column: span 6; } .connect-tile { grid-column: span 12; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 30px; } .connect-art { display: none; } .connect-tile .eyebrow, .connect-tile h3, .connect-tile > p { grid-column: 1; } .connect-tile .social-links { grid-column: 2; grid-row: 1 / 4; margin-block: 0; align-self: center; } .connect-tile .explore-shortcut { grid-column: 2; } .race-illustration { margin-inline: -24px; } }
+  @media (max-width: 760px) { .about-row { grid-template-columns: 1fr; gap: 22px; padding-block: 42px; } .about-row > p { font-size: 16px; } .home-paths { padding-top: 42px; } .paths-heading { align-items: start; } .index-marker { display: none; } .home-bento { gap: 16px; } .work-tile, .command-tile { grid-column: span 12; } .work-symbol { position: absolute; top: 30px; right: 22px; width: 110px; height: 75px; gap: 4px; opacity: .45; margin: 0; } .work-symbol svg { width: 55px; } .work-symbol > span { font-size: 45px; } .work-tile h3 { max-width: calc(100% - 85px); } .work-tile > p:not(.eyebrow) { max-width: 35rem; } .skill-lines { grid-template-columns: 1fr 1fr 1fr; } .skill-lines span { padding: 12px 8px 12px 0; font-size: 9px; line-height: 1.5; } .dashboard-inner { grid-template-columns: 90px minmax(0, 1fr); } .mock-service-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .scraper-tile, .f1-tile, .lab-tile, .notes-tile { grid-column: span 12; } .notebook-mark { position: absolute; right: 28px; top: 48px; font-size: 55px; } .notes-tile h3 { margin-top: 12px; } .home-note-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; } }
+  @media (max-width: 440px) { .bento-tile { padding: 22px; border-radius: 14px; } .bento-tile h3 { font-size: 1.6rem; } .tile-topline { gap: 0; margin-bottom: 12px; } .tile-topline .eyebrow { margin-bottom: 8px; } .stack-label { width: 100%; } .dashboard-side { display: none; } .dashboard-inner { grid-template-columns: minmax(0, 1fr); min-height: 252px; } .dashboard-main { padding: 12px; } .dashboard-bar { padding: 10px; gap: 7px; font-size: 8px; } .mock-label { font-size: 7px; } .dashboard-views button { padding: 7px; font-size: 8px; } .mock-service-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; } .mock-service-grid span { font-size: 7px; } .terminal-comment { font-size: 9px; } .module-list { font-size: 10px; } .race-illustration { margin-inline: -22px; } .race-illustration svg { height: 170px; } .lab-tile { padding: 26px; } .home-note-list { grid-template-columns: 1fr; gap: 0; } .connect-tile { display: flex; } .connect-art { display: block; width: 110px; height: auto; position: absolute; top: 38px; right: 8px; opacity: .5; } .connect-tile h3 { margin-top: 15px; } .connect-tile > p { max-width: 220px; } .connect-tile .social-links { width: 100%; margin-block: 8px 20px; } .connect-tile .explore-shortcut { width: 100%; } .closing-line { font-size: 9px; } }
+  @media (min-width: 761px) and (max-width: 1000px) { .mock-service-panel { min-height: 265px; } }
+</style>
+
+<script>
+  const dashboard = document.querySelector<HTMLElement>('[data-home-dashboard]');
+  if (dashboard) {
+    const buttons = dashboard.querySelectorAll<HTMLButtonElement>('[data-home-view]');
+    const panels = dashboard.querySelectorAll<HTMLElement>('[data-home-panel]');
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        buttons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+        panels.forEach((panel) => { panel.hidden = panel.dataset.homePanel !== button.dataset.homeView; });
+      });
+    });
+  }
+</script>
