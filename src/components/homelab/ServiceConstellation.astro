@@ -1,6 +1,5 @@
 ---
 import { categories, services } from '../../data/services';
-import ServiceLinkTag from './ServiceLinkTag.astro';
 const positions = [[16, 20], [50, 14], [84, 22], [85, 70], [64, 88], [36, 88], [15, 66]];
 const initial = services[0]!;
 ---
@@ -30,7 +29,6 @@ const initial = services[0]!;
     {services.map(service => <article data-detail={service.slug} hidden={service.slug !== initial.slug}>
       <div class="detail-identity"><div class="detail-logo"><img src={`/icons/services/${service.icon}`} width="52" height="52" alt={`${service.name} logo`} loading="lazy" /></div><div><p class="eyebrow">{service.category}</p><h3>{service.name}</h3></div></div>
       <p class="detail-description">{service.description}</p>
-      <div class="detail-access"><ServiceLinkTag service={service} /></div>
     </article>)}
   </div>
   <p class="map-note">Conceptual connections, not a network diagram. Select a node with your keyboard, pointer, or touch.</p>
@@ -99,16 +97,14 @@ const initial = services[0]!;
   .is-dimmed { opacity: .22; }
   .cluster.is-dimmed:focus-within, .cluster.is-dimmed:hover { opacity: 1; }
   .detail-panel { margin-top: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--soft); min-height: 140px; }
-  .detail-panel article:not([hidden]) { display: grid; grid-template-columns: minmax(240px, .8fr) 1.5fr auto; align-items: center; gap: 28px; padding: 24px 28px; }
+  .detail-panel article:not([hidden]) { display: grid; grid-template-columns: minmax(240px, .8fr) 1.5fr; align-items: center; gap: 28px; padding: 24px 28px; }
   .detail-identity { display: flex; align-items: center; gap: 18px; min-width: 0; }
   .detail-logo { display: grid; place-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; width: 76px; height: 76px; flex-shrink: 0; }
   .detail-identity .eyebrow { font-size: .6rem; margin: 0 0 4px; }
   .detail-identity h3 { font-size: 1.35rem; line-height: 1.15; margin: 0; }
   .detail-description { color: var(--muted); font-size: .9rem; margin: 0; }
-  .detail-access { font: .7rem var(--font-mono); color: var(--muted); }
-  .detail-access small { font-size: .65rem; }
   .map-note { color: var(--muted); font: .7rem var(--font-mono); margin-top: 16px; }
-  @media (max-width: 1050px) { .cluster { width: 224px; } .service-node { width: 50px; } .node-logo { width: 44px; height: 44px; } .detail-panel article:not([hidden]) { grid-template-columns: 1fr 1.4fr; } .detail-access { grid-column: 2; } }
+  @media (max-width: 1050px) { .cluster { width: 224px; } .service-node { width: 50px; } .node-logo { width: 44px; height: 44px; } .detail-panel article:not([hidden]) { grid-template-columns: 1fr 1.4fr; } }
   @media (max-width: 900px) {
     .map-board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-height: auto; padding: 24px 16px; gap: 28px 16px; }
     .connections { display: none; }
@@ -121,7 +117,6 @@ const initial = services[0]!;
   @media (max-width: 580px) {
     .detail-panel { min-height: 270px; }
     .detail-panel article:not([hidden]) { grid-template-columns: minmax(0, 1fr); padding: 24px; gap: 18px; }
-    .detail-access { grid-column: auto; }
     .map-board { padding-inline: 12px; gap: 28px 8px; }
     .cluster h3 { font-size: .65rem; }
     .service-node { width: 48px; }

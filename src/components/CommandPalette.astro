@@ -7,8 +7,11 @@ const pages = [
   ['Work', '/work', 'Business solutions · Power Platform · .NET'],
   ['Projects', '/projects', 'Public source code and personal projects'],
   ['Lab', '/lab', 'Interactive experiments'],
-  ['Flow field', '/lab/flow-field', 'Generative canvas experiment'],
-  ['Topo trail', '/lab/topo-trail', 'Topographic trail experiment'],
+  ['Topo trail', '/lab/topo-trail', 'Trail pathfinding on real and generated terrain'],
+  ['Racing line', '/lab/racing-line', 'AI cars learn a Formula 1 circuit'],
+  ['Request flow', '/lab/request-flow', 'How a request moves through the homelab'],
+  ['Guide', '/guide', 'Build your own home server, step by step'],
+  ['Radar', '/radar', 'Tech, AI, homelab, F1, and Microsoft headlines'],
   ['Notes', '/notes', 'Writing and field notes'],
   ['Homelab', '/homelab', 'SOL · Self-hosted services'],
 ];
@@ -17,7 +20,7 @@ const entries = [
   { label: 'Toggle theme', href: '', detail: 'Switch between deep navy and frost', kind: 'Action', icon: '', action: 'theme' },
   { label: 'Copy site URL', href: '', detail: `https://${site.domain}`, kind: 'Action', icon: '', action: 'copy' },
   ...projects.filter(project => project.href).map(project => ({ label: project.title, href: project.href!, detail: `GitHub · ${project.tags.join(' · ')}`, kind: 'Project', icon: '', action: '' })),
-  ...services.map(service => ({ label: service.name, href: service.link?.href ?? `/homelab#${service.slug}`, detail: `${service.category}${service.link?.scope === 'home' ? ' · Home network' : ''} · ${service.description}`, kind: 'Service', icon: `/icons/services/${service.icon}`, action: '' })),
+  ...services.map(service => ({ label: service.name, href: `/homelab#${service.slug}`, detail: `${service.category} · ${service.description}`, kind: 'Service', icon: `/icons/services/${service.icon}`, action: '' })),
 ];
 ---
 <dialog id="command-palette" class="palette" aria-labelledby="palette-title" data-entries={JSON.stringify(entries)} data-site-url={`https://${site.domain}`}>

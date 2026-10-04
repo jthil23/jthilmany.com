@@ -1,0 +1,284 @@
+---
+import Base from '../../layouts/Base.astro';
+import { flows } from '../../data/flows';
+
+---
+<Base title="Request flow · Lab" description="An interactive, illustrated walk-through of four request paths through SOL, Jeff's home server.">
+  <section class="container section">
+    <a class="back-link muted" href="/lab/">← Back to the lab</a>
+    <p class="eyebrow">Lab / 003</p>
+    <h1>Follow the <span>request.</span></h1>
+    <p class="experiment-intro muted">Trace four everyday journeys through SOL, from a movie request to remote access. Pick a path, then follow the packet one stop at a time.</p>
+
+    <div class="flow-experiment" data-request-flow>
+      <div class="flow-tabs" role="tablist" aria-label="Request scenarios">
+        {flows.map((flow, index) => <button class="flow-tab" type="button" role="tab" id={`tab-${flow.id}`} aria-controls={`panel-${flow.id}`} aria-selected={index === 0 ? 'true' : 'false'} tabindex={index === 0 ? 0 : -1} data-flow-tab={index}>{flow.tab}</button>)}
+      </div>
+      {flows.map((flow, flowIndex) => <section class="flow-panel" role="tabpanel" id={`panel-${flow.id}`} aria-labelledby={`tab-${flow.id}`} data-flow-panel={flowIndex} hidden={flowIndex !== 0}>
+        <div class="flow-heading"><div><p class="eyebrow">Scenario / {String(flowIndex + 1).padStart(2, '0')}</p><h2>{flow.title}</h2><p class="muted">{flow.summary}</p></div><span class="illustration-label">Illustration only</span></div>
+        <ol class="flow-track" tabindex="0" aria-label={`${flow.tab} steps. Use the arrow keys to move between steps.`}>
+          {flow.nodes.map((node, nodeIndex) => <li class:list={{ 'flow-stop': true, 'is-side': node.side }} data-node={node.id} data-node-index={nodeIndex}>
+            <div class="node-card" aria-current="false">
+              <div class="node-icons" aria-hidden="true" data-count={node.icons.length + (node.glyph ? 1 : 0)}>
+                {node.icons.map(icon => <span class="node-icon"><img src={icon.src} alt="" width="30" height="30" loading="eager" decoding="async" /></span>)}
+                {node.glyph && <span class="node-icon generic-icon"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  {node.glyph === 'phone' && <><rect x="9" y="3.5" width="14" height="25" rx="2.4"/><path d="M14 24.5h4"/></>}
+                  {node.glyph === 'camera' && <><path d="M4 11h5l2-3h9l2 3h6v14H4z"/><circle cx="16" cy="18" r="4.5"/></>}
+                  {node.glyph === 'mic' && <><rect x="12" y="4" width="8" height="15" rx="4"/><path d="M8 15a8 8 0 0 0 16 0M16 23v5m-5 0h10"/></>}
+                  {node.glyph === 'speaker' && <><path d="M5 13h5l7-6v18l-7-6H5z"/><path d="M22 12a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></>}
+                  {node.glyph === 'lock' && <><rect x="5" y="14" width="22" height="15" rx="2"/><path d="M10 14V9a6 6 0 0 1 12 0v5m-6 6v3"/></>}
+                  {node.glyph === 'app' && <><rect x="5" y="5" width="22" height="22" rx="3"/><path d="M5 12h22M12 5v7"/><circle cx="18" cy="19" r="3"/></>}
+                </svg></span>}
+              </div>
+              <strong>{node.label}</strong><span class="node-role">{node.role}</span>
+            </div>
+            {nodeIndex < flow.nodes.length - 1 && <div class="flow-edge" aria-hidden="true"><span class="edge-line"></span><span class="packet"></span></div>}
+          </li>)}
+        </ol>
+        <div class="step-detail" aria-live="off">
+          <p class="step-kicker" data-step-kicker>Step 1 of {flow.steps.length}</p>
+          <h3 data-step-title>{flow.steps[0].title}</h3>
+          <p class="step-caption" data-step-caption>{flow.steps[0].caption}</p>
+        </div>
+        <div class="player-controls">
+          <div class="action-controls">
+            <button class="button secondary" type="button" data-back disabled>← Back</button>
+            <button class="button" type="button" data-play aria-pressed="false">Play</button>
+            <button class="button secondary" type="button" data-forward>Next →</button>
+            <button class="button secondary" type="button" data-restart>Restart</button>
+          </div>
+          <div class="progress-wrap"><span class="progress-label" data-progress-label>Step 1 of {flow.steps.length}</span><div class="progress-track" role="progressbar" aria-label="Scenario progress" aria-valuemin="1" aria-valuemax={flow.steps.length} aria-valuenow="1" data-progress><span></span></div></div>
+        </div>
+        <p class="flow-status muted" role="status" aria-live="polite" data-status>Ready. Use the controls or arrow keys to follow the request.</p>
+      </section>)}
+      <noscript><p class="muted">JavaScript is needed for the interactive walkthrough. The scenario descriptions and service directory elsewhere on the site are still available.</p></noscript>
+    </div>
+
+    <div class="experiment-notes">
+      <div><p class="eyebrow">01 / What this shows</p><h2>Services passing the baton.</h2><p class="muted">Each walkthrough highlights one stop at a time and moves an illustrated packet along the path. The movie, camera, voice, and remote-access routes are separate examples, not one combined system.</p></div>
+      <div><p class="eyebrow">02 / A careful picture</p><h2>Architecture, not a live feed.</h2><p class="muted">This is an illustration of the architecture, not live traffic. The animation is a teaching aid: it does not connect to SOL, report status, or measure speed. Under reduced motion the flow does not autoplay, and every step remains available through the controls.</p></div>
+    </div>
+  </section>
+</Base>
+<script>
+  import { flows } from '../../data/flows';
+
+  let disposeFlow: (() => void) | undefined;
+  function mountRequestFlow() {
+    disposeFlow?.();
+    disposeFlow = undefined;
+    const root = document.querySelector<HTMLElement>('[data-request-flow]');
+    if (!root) return;
+    const events = new AbortController();
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-flow-tab]')];
+    const panels = [...root.querySelectorAll<HTMLElement>('[data-flow-panel]')];
+    let timer = 0;
+    let currentPanel = 0;
+    let currentStep = 0;
+    let playing = false;
+
+    function stop() {
+      playing = false;
+      window.clearTimeout(timer);
+      timer = 0;
+      const play = panels[currentPanel]?.querySelector<HTMLButtonElement>('[data-play]');
+      if (play) { play.textContent = 'Play'; play.setAttribute('aria-pressed', 'false'); }
+    }
+    function render(animate = false) {
+      const panel = panels[currentPanel];
+      const flow = flows[currentPanel];
+      if (!panel || !flow) return;
+      const step = flow.steps[currentStep];
+      const activeIndex = flow.nodes.findIndex(node => node.id === step.node);
+      const track = panel.querySelector<HTMLOListElement>('.flow-track');
+      const nodes = track ? [...track.querySelectorAll<HTMLElement>('[data-node-index]')] : [];
+      nodes.forEach((node, index) => {
+        const card = node.querySelector<HTMLElement>('.node-card');
+        node.classList.toggle('is-active', index === activeIndex);
+        node.classList.toggle('is-visited', index < activeIndex);
+        card?.setAttribute('aria-current', index === activeIndex ? 'step' : 'false');
+      });
+      const edges = track ? [...track.querySelectorAll<HTMLElement>('.flow-edge')] : [];
+      edges.forEach((edge, index) => {
+        edge.classList.toggle('is-done', index < activeIndex);
+        edge.classList.remove('is-travelling');
+      });
+      if (animate && activeIndex > 0) {
+        const edge = edges[activeIndex - 1];
+        if (edge) { void edge.offsetWidth; edge.classList.add('is-travelling'); }
+      }
+      const title = panel.querySelector<HTMLElement>('[data-step-title]');
+      const caption = panel.querySelector<HTMLElement>('[data-step-caption]');
+      const kicker = panel.querySelector<HTMLElement>('[data-step-kicker]');
+      const label = panel.querySelector<HTMLElement>('[data-progress-label]');
+      const progress = panel.querySelector<HTMLElement>('[data-progress]');
+      const back = panel.querySelector<HTMLButtonElement>('[data-back]');
+      const forward = panel.querySelector<HTMLButtonElement>('[data-forward]');
+      const status = panel.querySelector<HTMLElement>('[data-status]');
+      const text = `Step ${currentStep + 1} of ${flow.steps.length}`;
+      if (title) title.textContent = step.title;
+      if (caption) caption.textContent = step.caption;
+      if (kicker) kicker.textContent = text;
+      if (label) label.textContent = text;
+      progress?.setAttribute('aria-valuenow', String(currentStep + 1));
+      const fill = progress?.firstElementChild as HTMLElement | null;
+      if (fill) fill.style.width = `${(currentStep + 1) / flow.steps.length * 100}%`;
+      if (back) back.disabled = currentStep === 0;
+      if (forward) forward.disabled = currentStep === flow.steps.length - 1;
+      if (status) status.textContent = `${text}: ${step.title}`;
+    }
+    function advance() {
+      if (currentStep < flows[currentPanel].steps.length - 1) {
+        currentStep++;
+        render(!motion.matches);
+        if (playing) timer = window.setTimeout(advance, 3800);
+      } else stop();
+    }
+    function play() {
+      if (playing) { stop(); return; }
+      if (currentStep === flows[currentPanel].steps.length - 1) { currentStep = 0; render(false); }
+      playing = true;
+      const button = panels[currentPanel].querySelector<HTMLButtonElement>('[data-play]');
+      if (button) { button.textContent = 'Pause'; button.setAttribute('aria-pressed', 'true'); }
+      timer = window.setTimeout(advance, 3800);
+    }
+    function selectFlow(index: number, focus = false) {
+      if (index < 0 || index >= panels.length) return;
+      stop();
+      currentPanel = index;
+      currentStep = 0;
+      tabs.forEach((tab, tabIndex) => {
+        tab.setAttribute('aria-selected', tabIndex === index ? 'true' : 'false');
+        tab.tabIndex = tabIndex === index ? 0 : -1;
+      });
+      panels.forEach((panel, panelIndex) => { panel.hidden = panelIndex !== index; });
+      if (focus) tabs[index]?.focus();
+      render(false);
+      if (!motion.matches && !document.hidden) play();
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => selectFlow(index), { signal: events.signal });
+      tab.addEventListener('keydown', event => {
+        let next = index;
+        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (index + 1) % tabs.length;
+        else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (index - 1 + tabs.length) % tabs.length;
+        else if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = tabs.length - 1;
+        else return;
+        event.preventDefault();
+        selectFlow(next, true);
+      }, { signal: events.signal });
+    });
+    panels.forEach((panel, panelIndex) => {
+      panel.querySelector<HTMLButtonElement>('[data-back]')?.addEventListener('click', () => {
+        stop();
+        currentStep = Math.max(0, currentStep - 1);
+        render(false);
+      }, { signal: events.signal });
+      panel.querySelector<HTMLButtonElement>('[data-forward]')?.addEventListener('click', () => {
+        stop();
+        currentStep = Math.min(flows[panelIndex].steps.length - 1, currentStep + 1);
+        render(!motion.matches);
+      }, { signal: events.signal });
+      panel.querySelector<HTMLButtonElement>('[data-play]')?.addEventListener('click', play, { signal: events.signal });
+      panel.querySelector<HTMLButtonElement>('[data-restart]')?.addEventListener('click', () => { stop(); currentStep = 0; render(false); }, { signal: events.signal });
+      panel.querySelector<HTMLOListElement>('.flow-track')?.addEventListener('keydown', event => {
+        if (event.key !== 'ArrowRight' && event.key !== 'ArrowDown' && event.key !== 'ArrowLeft' && event.key !== 'ArrowUp') return;
+        event.preventDefault();
+        stop();
+        currentStep = Math.max(0, Math.min(flows[panelIndex].steps.length - 1, currentStep + (event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1)));
+        render(false);
+      }, { signal: events.signal });
+    });
+    motion.addEventListener('change', event => { if (event.matches) stop(); }, { signal: events.signal });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); }, { signal: events.signal });
+    render(false);
+    if (!motion.matches && !document.hidden) play();
+    disposeFlow = () => {
+      stop();
+      events.abort();
+    };
+  }
+  mountRequestFlow();
+  document.addEventListener('astro:page-load', mountRequestFlow);
+  document.addEventListener('astro:before-swap', () => disposeFlow?.());
+  window.addEventListener('pagehide', () => disposeFlow?.());
+  window.addEventListener('pageshow', event => { if (event.persisted) mountRequestFlow(); });
+</script>
+<style>
+  .back-link { display: inline-block; margin-bottom: 2rem; text-decoration: none; }
+  h1 span { color: var(--accent); }
+  .experiment-intro { max-width: 44rem; font-size: 1.15rem; }
+  .flow-experiment { margin-top: 2.5rem; }
+  .flow-tabs { display: flex; flex-wrap: wrap; gap: .55rem; margin-bottom: 1rem; }
+  .flow-tab { min-height: 44px; padding: .65rem 1rem; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 999px; font-family: inherit; font-size: .84rem; font-weight: 650; cursor: pointer; }
+  .flow-tab[aria-selected="true"] { color: var(--text); background: var(--soft); border-color: var(--accent); }
+  .flow-panel { padding: clamp(1rem, 3vw, 2rem); border: 1px solid var(--line); border-radius: 1rem; background: var(--panel); }
+  .flow-panel[hidden] { display: none; }
+  .flow-heading { display: flex; justify-content: space-between; align-items: start; gap: 1rem; }
+  .flow-heading .eyebrow { margin-bottom: .7rem; }
+  .flow-heading h2 { max-width: 48rem; margin: 0 0 .65rem; font-size: clamp(1.4rem, 3.4vw, 2.25rem); letter-spacing: -.035em; }
+  .flow-heading .muted { max-width: 54rem; margin: 0; }
+  .illustration-label { flex: none; padding: .45rem .6rem; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; font: 9px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+  .flow-track { display: flex; align-items: stretch; list-style: none; padding: 0; margin: 2rem 0 1.5rem; min-width: 0; }
+  .flow-stop { display: contents; }
+  .node-card { position: relative; display: flex; flex: 0 1 102px; flex-direction: column; align-items: center; justify-content: start; gap: .55rem; min-width: 0; text-align: center; color: var(--muted); }
+  .node-icons { display: flex; justify-content: center; align-items: center; gap: 0; max-width: 100%; height: 66px; }
+  .node-icon + .node-icon { margin-left: -12px; }
+  .node-icons[data-count="2"] .node-icon { width: 46px; height: 46px; padding: 8px; }
+  .node-icons[data-count="3"] .node-icon { width: 42px; height: 42px; padding: 7px; border-radius: 12px; }
+  .node-icons[data-count="2"] .node-icon :is(img, svg), .node-icons[data-count="3"] .node-icon :is(img, svg) { width: 26px; height: 26px; }
+  .node-icon { display: grid; place-items: center; width: 54px; height: 54px; padding: 9px; background: var(--soft); border: 1px solid var(--line); border-radius: 15px; }
+  .node-icon img, .node-icon svg { display: block; width: 34px; height: 34px; object-fit: contain; }
+  .node-icon img { width: 30px; height: 30px; }
+  .node-card strong { max-width: 11ch; color: var(--text); font-size: .8rem; line-height: 1.2; }
+  .node-role { font: 9px var(--font-mono); text-transform: uppercase; letter-spacing: .06em; }
+  .is-side .node-card { opacity: .76; }
+  .is-active .node-icon { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent), 0 0 20px color-mix(in srgb, var(--accent) 28%, transparent); }
+  .is-active .node-card strong, .is-active .node-role { color: var(--accent); }
+  .flow-edge { position: relative; flex: 1 1 0; min-width: 8px; height: 66px; }
+  .edge-line { position: absolute; left: 0; right: 0; top: 32px; height: 2px; background: var(--line); }
+  .flow-edge.is-done .edge-line { background: var(--accent); }
+  .packet { position: absolute; z-index: 1; left: 0; top: 27px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 14px var(--accent); opacity: 0; }
+  .flow-edge.is-travelling .packet { opacity: 1; animation: packet-x .85s ease-in-out both; }
+  .step-detail { min-height: 130px; padding: 1.2rem 1.35rem; background: var(--bg); border: 1px solid var(--line); border-radius: .8rem; }
+  .step-kicker { margin: 0 0 .35rem; color: var(--accent); font: 10px var(--font-mono); text-transform: uppercase; letter-spacing: .08em; }
+  .step-detail h3 { margin: 0 0 .4rem; font-size: 1.1rem; }
+  .progress-track { flex: 1; height: 5px; overflow: hidden; background: var(--line); border-radius: 999px; }
+  .progress-track span { display: block; width: 0; height: 100%; background: var(--accent); transition: width .25s ease; }
+  .flow-status { min-height: 1.4em; margin: .8rem 0 0; font-size: .8rem; }
+  .experiment-notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3rem; padding-top: 2.5rem; margin-top: 2rem; border-top: 1px solid var(--line); }
+  .experiment-notes h2 { margin-top: 1rem; font-size: 1.4rem; letter-spacing: -.03em; }
+  @keyframes packet-x { from { left: 0; transform: scale(.65); } 20%, 80% { transform: scale(1.1); } to { left: calc(100% - 12px); transform: scale(.65); } }
+  @media (max-width: 1100px) {
+    .flow-track { display: block; margin-block: 1.5rem; }
+    .flow-stop { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 30px; }
+    .node-card { flex: none; display: grid; grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: auto auto; align-content: center; justify-items: start; gap: 2px 12px; text-align: left; }
+    .node-icons { grid-row: 1 / 3; justify-content: start; width: 96px; height: 52px; }
+    .node-icons .node-icon, .node-icons[data-count] .node-icon { width: 40px; height: 40px; padding: 6px; border-radius: 12px; }
+    .node-icons .node-icon :is(img, svg), .node-icons[data-count] .node-icon :is(img, svg) { width: 26px; height: 26px; }
+    .node-card strong { max-width: none; align-self: end; }
+    .node-role { align-self: start; }
+    .flow-edge { flex: none; width: 96px; height: 30px; min-height: 30px; margin: 0; }
+    .edge-line { top: 0; bottom: 0; left: 19px; right: auto; width: 2px; height: auto; }
+    .packet { top: 0; left: 14px; }
+    .flow-edge.is-travelling .packet { animation-name: packet-y; }
+  }
+  @keyframes packet-y { from { top: 0; transform: scale(.65); } 20%, 80% { transform: scale(1.1); } to { top: calc(100% - 12px); transform: scale(.65); } }
+  @media (max-width: 650px) {
+    .flow-heading { display: block; }
+    .illustration-label { display: inline-block; margin-top: 1rem; }
+    .flow-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .flow-tab { padding-inline: .6rem; font-size: .75rem; }
+    .player-controls { align-items: stretch; }
+    .action-controls { width: 100%; }
+    .action-controls button { font-size: 12px; padding: 12px 14px; }
+    .progress-wrap { max-width: none; }
+    .experiment-notes { grid-template-columns: 1fr; gap: 1.5rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .flow-edge.is-travelling .packet, .progress-track span { animation: none !important; transition: none; }
+  }
+</style>

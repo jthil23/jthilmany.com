@@ -3,7 +3,6 @@ import Base from '../layouts/Base.astro';
 import ServerIdentity from '../components/homelab/ServerIdentity.astro';
 import ServiceConstellation from '../components/homelab/ServiceConstellation.astro';
 import Pipeline from '../components/homelab/Pipeline.astro';
-import ServiceLinkTag from '../components/homelab/ServiceLinkTag.astro';
 import { categories, services, mediaPipeline, smartHomePipeline } from '../data/services';
 const commandViews = ['Dashboard', 'Containers', 'Media', 'Storage', 'Automations', 'System', 'Logs', 'Settings'];
 const commandServices = services.filter(service => ['plex', 'sonarr', 'home-assistant', 'mariadb', 'grafana', 'ollama'].includes(service.slug));
@@ -38,11 +37,11 @@ const commandServices = services.filter(service => ['plex', 'sonarr', 'home-assi
         <div class="directory-heading"><span class="directory-index">{String(index + 1).padStart(2, '0')}</span><h3 id={`directory-category-${index}`}>{category.name}</h3><p>{category.blurb}</p></div>
         <div class="directory-grid">{services.filter(service => service.category === category.name).map(service => <article id={service.slug} class="directory-service">
           <div class="directory-logo"><img src={`/icons/services/${service.icon}`} width="36" height="36" alt={`${service.name} logo`} loading="lazy" /></div>
-          <div><h4>{service.name}</h4><p>{service.description}</p><ServiceLinkTag service={service} /></div>
+          <div><h4>{service.name}</h4><p>{service.description}</p></div>
         </article>)}</div>
       </section>)}
     </section>
-    <aside class="access-note" aria-labelledby="access-title"><span class="note-mark" aria-hidden="true">{'{ }'}</span><div><h2 id="access-title">A look inside. Not a way in.</h2><p>Links marked <strong>Home network</strong> open on my LAN or over Tailscale; everywhere else they don't resolve or are refused by Nginx Proxy Manager's access rules. Each service keeps its own login. This site makes no live status checks, and the illustrations aren't monitoring dashboards.</p><a class="text-link" href="/projects">See what I'm building on top of it ↗</a></div></aside>
+    <aside class="access-note" aria-labelledby="access-title"><span class="note-mark" aria-hidden="true">{'{ }'}</span><div><h2 id="access-title">A look inside. Not a way in.</h2><p>This is a showcase of the services running on SOL, not an access point to them. The illustrations are conceptual, not monitoring dashboards, and this site makes no live status checks.</p><a class="text-link" href="/projects">See what I'm building on top of it ↗</a></div></aside>
   </div>
 </Base>
 <style>
@@ -93,7 +92,6 @@ const commandServices = services.filter(service => ['plex', 'sonarr', 'home-assi
   .directory-logo img { object-fit: contain; }
   .directory-service h4 { font-size: .85rem; line-height: 1.3; margin: 4px 0 8px; }
   .directory-service p { font-size: .73rem; line-height: 1.65; color: var(--muted); margin: 0; }
-  .directory-service a { display: inline-block; margin-top: 10px; font-size: .7rem; }
   .access-note { display: flex; align-items: start; gap: 28px; padding: 36px 0 72px; border-top: 1px solid var(--line); }
   .note-mark { color: var(--accent); font: 2rem var(--font-mono); white-space: nowrap; line-height: 1.4; }
   .access-note h2 { font-size: 1.3rem; margin: 0 0 12px; letter-spacing: -.03em; }

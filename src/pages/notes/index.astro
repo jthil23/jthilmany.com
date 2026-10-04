@@ -3,4 +3,4 @@ import Base from '../../layouts/Base.astro';
 import { getCollection } from 'astro:content';
 const notes = (await getCollection('notes')).sort((a,b)=>b.data.date.getTime()-a.data.date.getTime());
 ---
-<Base title="Notes"><div class="container section"><p class="eyebrow">Field notes</p><h1>Learning in the open.</h1><p class="lead">Build notes, small discoveries, and ideas worth keeping.</p>{notes.map(n=><article class="note-row"><h2><a href={`/notes/${n.id}`}>{n.data.title}</a></h2><p class="muted">{n.data.description}</p></article>)}</div></Base>
+<Base title="Notes"><div class="container section"><p class="eyebrow">Field notes</p><h1>Learning in the open.</h1><p class="lead">Build notes, small discoveries, and ideas worth keeping.</p>{notes.map(n=><article class="note-row"><p class="eyebrow muted"><time datetime={n.data.date.toISOString().slice(0, 10)}>{n.data.date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })}</time></p><h2><a href={`/notes/${n.id}`}>{n.data.title}</a></h2><p class="muted">{n.data.description}</p></article>)}</div></Base>

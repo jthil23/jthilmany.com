@@ -4,12 +4,6 @@
 
 export type ServiceCategory = 'Media' | 'Media automation' | 'Smart home' | 'Network & security' | 'Data' | 'Observability' | 'AI & personal cloud';
 
-export interface ServiceLink {
-  href: string;
-  /** `home`: reachable only on the home network or Tailscale (Nginx Proxy Manager access list). */
-  scope: 'home' | 'public';
-}
-
 export interface Service {
   slug: string;
   name: string;
@@ -17,7 +11,6 @@ export interface Service {
   icon: string;
   category: ServiceCategory;
   description: string;
-  link?: ServiceLink;
 }
 
 export const server = {
@@ -41,42 +34,40 @@ export const categories: { name: ServiceCategory; blurb: string }[] = [
   { name: 'AI & personal cloud', blurb: 'Self-hosted alternatives to the big clouds.' },
 ];
 
-const home = (sub: string, path = ''): ServiceLink => ({ href: `https://${sub}.jthilmany.com${path}`, scope: 'home' });
-
 export const services: Service[] = [
-  { slug: 'plex', name: 'Plex', icon: 'plex.svg', category: 'Media', description: 'The media server: movies and shows streamed to every screen in the house and beyond.', link: home('plex', '/web/index.html') },
+  { slug: 'plex', name: 'Plex', icon: 'plex.svg', category: 'Media', description: 'The media server: movies and shows streamed to every screen in the house and beyond.' },
   { slug: 'tautulli', name: 'Tautulli', icon: 'tautulli.svg', category: 'Media', description: 'Watch history and stats for Plex: who watched what, and when.' },
-  { slug: 'tdarr', name: 'Tdarr', icon: 'tdarr.svg', category: 'Media', description: 'GPU-accelerated transcoding on the RTX 3080, keeping the library in consistent, efficient formats.', link: home('convert') },
+  { slug: 'tdarr', name: 'Tdarr', icon: 'tdarr.svg', category: 'Media', description: 'GPU-accelerated transcoding on the RTX 3080, keeping the library in consistent, efficient formats.' },
   { slug: 'bazarr', name: 'Bazarr', icon: 'bazarr.svg', category: 'Media', description: 'Finds and syncs subtitles for everything in the library.' },
   { slug: 'kometa', name: 'Kometa', icon: 'kometa.png', category: 'Media', description: 'Builds Plex collections and overlays automatically.' },
-  { slug: 'seerr', name: 'Seerr', icon: 'overseerr.svg', category: 'Media automation', description: 'The request desk: ask for a movie or show and the pipeline takes it from there.', link: home('discover') },
-  { slug: 'sonarr', name: 'Sonarr', icon: 'sonarr.svg', category: 'Media automation', description: 'Tracks TV series, watches for new episodes, and keeps seasons organized.', link: home('tv') },
-  { slug: 'radarr', name: 'Radarr', icon: 'radarr.svg', category: 'Media automation', description: 'The same idea for movies: monitoring, upgrades, and tidy folders.', link: home('movies') },
+  { slug: 'seerr', name: 'Seerr', icon: 'overseerr.svg', category: 'Media automation', description: 'The request desk: ask for a movie or show and the pipeline takes it from there.' },
+  { slug: 'sonarr', name: 'Sonarr', icon: 'sonarr.svg', category: 'Media automation', description: 'Tracks TV series, watches for new episodes, and keeps seasons organized.' },
+  { slug: 'radarr', name: 'Radarr', icon: 'radarr.svg', category: 'Media automation', description: 'The same idea for movies: monitoring, upgrades, and tidy folders.' },
   { slug: 'prowlarr', name: 'Prowlarr', icon: 'prowlarr.svg', category: 'Media automation', description: 'One indexer manager feeding Sonarr and Radarr.' },
-  { slug: 'nzbget', name: 'NZBGet', icon: 'nzbget.svg', category: 'Media automation', description: 'The downloader at the end of the search.', link: home('download') },
+  { slug: 'nzbget', name: 'NZBGet', icon: 'nzbget.svg', category: 'Media automation', description: 'The downloader at the end of the search.' },
   { slug: 'qbittorrent', name: 'qBittorrent', icon: 'qbittorrent.svg', category: 'Media automation', description: 'A second download client, routed through the VPN container.' },
   { slug: 'recyclarr', name: 'Recyclarr', icon: 'recyclarr.svg', category: 'Media automation', description: 'Keeps Sonarr and Radarr quality profiles in sync with curated guides.' },
-  { slug: 'home-assistant', name: 'Home Assistant', icon: 'home-assistant.svg', category: 'Smart home', description: 'The hub for the house: devices, dashboards, and automations, all running locally.', link: home('home') },
+  { slug: 'home-assistant', name: 'Home Assistant', icon: 'home-assistant.svg', category: 'Smart home', description: 'The hub for the house: devices, dashboards, and automations, all running locally.' },
   { slug: 'node-red', name: 'Node-RED', icon: 'node-red.svg', category: 'Smart home', description: 'Visual flows for automations that outgrow simple rules.' },
   { slug: 'zigbee2mqtt', name: 'Zigbee2MQTT', icon: 'zigbee2mqtt.svg', category: 'Smart home', description: 'Bridges Zigbee sensors and switches into the home network without vendor clouds.' },
   { slug: 'z-wave-js-ui', name: 'Z-Wave JS UI', icon: 'z-wave-js-ui.svg', category: 'Smart home', description: 'The Z-Wave side of the house, managed locally.' },
   { slug: 'matter', name: 'Matter Server', icon: 'matter.svg', category: 'Smart home', description: 'Matter devices connected straight into Home Assistant.' },
   { slug: 'mosquitto', name: 'Mosquitto', icon: 'mosquitto.svg', category: 'Smart home', description: 'The MQTT broker every device message passes through.' },
-  { slug: 'frigate', name: 'Frigate', icon: 'frigate.svg', category: 'Smart home', description: 'Local camera recording with GPU-accelerated object detection.', link: home('frigate') },
+  { slug: 'frigate', name: 'Frigate', icon: 'frigate.svg', category: 'Smart home', description: 'Local camera recording with GPU-accelerated object detection.' },
   { slug: 'go2rtc', name: 'go2rtc', icon: 'go2rtc.png', category: 'Smart home', description: 'Low-latency camera streams for dashboards and Frigate.' },
   { slug: 'voice', name: 'Wyoming voice', icon: 'rhasspy.svg', category: 'Smart home', description: 'Local voice control: openWakeWord, faster-whisper speech-to-text, and Piper text-to-speech.' },
   { slug: 'music-assistant', name: 'Music Assistant', icon: 'music-assistant.svg', category: 'Smart home', description: 'One music library for every speaker in the house.' },
-  { slug: 'nginx-proxy-manager', name: 'Nginx Proxy Manager', icon: 'nginx-proxy-manager.svg', category: 'Network & security', description: 'Routes jthilmany.com subdomains to the right containers, with TLS and home-only access rules.' },
+  { slug: 'nginx-proxy-manager', name: 'Nginx Proxy Manager', icon: 'nginx-proxy-manager.svg', category: 'Network & security', description: 'Routes incoming traffic to the right containers and manages TLS.' },
   { slug: 'adguard-home', name: 'AdGuard Home', icon: 'adguard-home.svg', category: 'Network & security', description: 'Network-wide DNS filtering: fewer ads and trackers for every device.' },
-  { slug: 'vaultwarden', name: 'Vaultwarden', icon: 'vaultwarden.svg', category: 'Network & security', description: 'A self-hosted password vault compatible with Bitwarden clients.', link: home('vault') },
+  { slug: 'vaultwarden', name: 'Vaultwarden', icon: 'vaultwarden.svg', category: 'Network & security', description: 'A self-hosted password vault compatible with Bitwarden clients.' },
   { slug: 'tailscale', name: 'Tailscale', icon: 'tailscale.svg', category: 'Network & security', description: 'Private access to everything here from anywhere, without opening ports.' },
   { slug: 'gluetun', name: 'Gluetun', icon: 'gluetun.svg', category: 'Network & security', description: 'A VPN tunnel container other services route through.' },
-  { slug: 'unifi', name: 'UniFi', icon: 'unifi.svg', category: 'Network & security', description: 'The network itself: gateway, Wi-Fi, and switching.', link: home('unifi') },
+  { slug: 'unifi', name: 'UniFi', icon: 'unifi.svg', category: 'Network & security', description: 'The network itself: gateway, Wi-Fi, and switching.' },
   { slug: 'mariadb', name: 'MariaDB', icon: 'mariadb.svg', category: 'Data', description: 'The shared database behind Command Center and the scraper.' },
   { slug: 'redis', name: 'Redis', icon: 'redis.svg', category: 'Data', description: 'Fast in-memory caching and queues.' },
   { slug: 'oracle', name: 'Oracle Free', icon: 'oracle.svg', category: 'Data', description: 'An Oracle Database 23 sandbox for experiments.' },
   { slug: 'adminer', name: 'Adminer', icon: 'adminer.svg', category: 'Data', description: 'A lightweight web console for the databases.' },
-  { slug: 'grafana', name: 'Grafana', icon: 'grafana.svg', category: 'Observability', description: 'Dashboards and graphs on top of the metrics.', link: home('app') },
+  { slug: 'grafana', name: 'Grafana', icon: 'grafana.svg', category: 'Observability', description: 'Dashboards and graphs on top of the metrics.' },
   { slug: 'prometheus', name: 'Prometheus', icon: 'prometheus.svg', category: 'Observability', description: 'Collects system and container metrics; Command Center queries it directly.' },
   { slug: 'uptime-kuma', name: 'Uptime Kuma', icon: 'uptime-kuma.svg', category: 'Observability', description: 'Watches every service and complains when one goes quiet.' },
   { slug: 'scrutiny', name: 'Scrutiny', icon: 'scrutiny.svg', category: 'Observability', description: 'SMART health for every drive in the array.' },

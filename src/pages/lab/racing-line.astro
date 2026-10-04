@@ -1,0 +1,129 @@
+---
+import Base from '../../layouts/Base.astro';
+import calendarFallback from '../../data/f1/calendar-2026.json';
+import circuits from '../../data/f1/circuits.json';
+import { classics, normalizeCalendar, type CalendarSource } from '../../lib/f1/calendar';
+import type { Circuit } from '../../lib/f1/track';
+const year = new Date().getUTCFullYear();
+let rawCalendar: CalendarSource = calendarFallback;
+try {
+  const response = await fetch(`https://api.jolpi.ca/ergast/f1/${year}.json`, { signal: AbortSignal.timeout(4000) });
+  if (!response.ok) throw new Error(`Calendar request returned ${response.status}`);
+  const current = await response.json();
+  if (!current?.MRData?.RaceTable?.Races?.length) throw new Error('Calendar response had no races');
+  rawCalendar = current;
+} catch {
+  if (year !== 2026) rawCalendar = calendarFallback;
+}
+const calendar = normalizeCalendar(rawCalendar, circuits as Circuit[]);
+const circuitById = new Map((circuits as Circuit[]).map(circuit => [circuit.id, circuit]));
+const scheduledRaces = [...new Map(calendar.Races.map(race => [race.Circuit.circuitId, race])).values()];
+const scheduledIds = [...new Set(scheduledRaces.map(race => race.outlineId).filter((id): id is string => Boolean(id)))];
+const safeCalendar = JSON.stringify(calendar).replace(/</g, '\\u003c');
+---
+<Base title="Racing line · Lab" description="Watch a population of simulated AI cars learn an F1 circuit by neuroevolution, then compare their progress with an estimated ideal racing line.">
+  <section class="container section">
+    <a class="back-link muted" href="/lab/">← Back to the lab</a>
+    <p class="eyebrow">Lab / 002</p>
+    <h1>Teach a car <span>the line.</span></h1>
+    <p class="experiment-intro muted">A population of simulated cars learns to drive this circuit by neuroevolution. Each small neural network directly controls steering and throttle or braking; the ideal line is computed separately for comparison, never supplied to the drivers. The cars that travel furthest are selected, crossed, and mutated across generations.</p>
+    <div class="race-card" data-race-week aria-label="Track of the week">
+      <div><p class="eyebrow">Track of the week</p><h2 data-race-name>Finding this week’s race…</h2></div>
+      <div class="race-meta"><span data-race-date></span><span data-race-circuit></span></div>
+    </div>
+    <div class="racing-experiment" data-racing-experiment>
+      <script type="application/json" data-calendar-json set:html={safeCalendar} />
+      <div class="track-toolbar">
+        <label for="circuit-select">Circuit</label>
+        <select id="circuit-select" data-circuit-select aria-label="Choose a circuit">
+          {scheduledRaces.map((race, index) => <option value={race.outlineId ?? `unavailable:${race.Circuit.circuitId}`} disabled={!race.outlineId}>{String(index + 1).padStart(2, '0')} · {race.Circuit.circuitName}{race.outlineId ? '' : ' (outline unavailable)'}</option>)}
+          {classics.filter(id => !scheduledIds.includes(id) && circuitById.has(id)).map((id, index) => <option value={id}>Classic {String(index + 1).padStart(2, '0')} · {circuitById.get(id)?.name}</option>)}
+        </select>
+        <label class="ideal-toggle"><input type="checkbox" data-ideal-toggle checked /> Show ideal line</label>
+      </div>
+      <div class="canvas-frame">
+        <canvas data-race-canvas role="img" aria-label="Top-down view of a real Formula 1 circuit with a simulated population of evolving cars and an optional computed ideal racing line."></canvas>
+        <span class="canvas-label">Real circuit outline · simulated cars</span>
+        <span class="map-key"><i></i> Ideal line</span>
+      </div>
+      <div class="race-controls">
+        <div class="action-controls"><button class="button" type="button" data-play aria-pressed="false">Play</button><button class="button secondary" type="button" data-reset>Reset</button><label class="training-count">Headless generations<input data-train-count type="number" min="1" max="500" value="10" aria-label="Number of headless generations" /></label><button class="button secondary" type="button" data-train>Train</button></div>
+        <label class="speed-control">Steps per frame<select data-speed aria-label="Simulation speed"><option value="1">1×</option><option value="8" selected>8×</option><option value="32">32×</option><option value="96">Fast-forward</option></select></label>
+        <label class="mutation-control"><span>Mutation rate <output data-mutation-value>12%</output></span><input type="range" data-mutation min="2" max="35" value="12" step="1" aria-label="Mutation rate" /></label>
+      </div>
+      <p class="race-status muted" data-race-status role="status" aria-live="polite">Preparing the simulation…</p>
+      <div class="stats-grid" aria-label="Simulation statistics">
+        <div><span>Generation</span><strong data-generation>1</strong></div><div><span>Cars alive</span><strong data-alive>64</strong></div><div><span>Best progress</span><strong data-progress>0%</strong></div><div><span>Best lap <small>(simulated)</small></span><strong data-lap>No lap yet</strong></div>
+      </div>
+      <p class="comparison muted" data-compare>No AI lap yet · ideal-line estimate available when the simulation starts.</p>
+      <div class="chart-panel"><div class="chart-heading"><h2>Fitness by generation</h2><span>Lap-equivalent fitness · <i></i> Best <i class="average"></i> Average</span></div><canvas data-fitness-chart role="img" aria-label="Chart of best and average simulated fitness by generation, scaled as lap-equivalent percentages."></canvas></div>
+      <noscript><p class="muted">JavaScript is needed to run the cars. The selected track for the current calendar is shown above; the notes explain the experiment.</p></noscript>
+    </div>
+    <div class="experiment-notes">
+      <div><p class="eyebrow">How it learns</p><h2>A network drives; evolution selects.</h2><p class="muted">Each car receives seven forward distance rays, its speed, three centerline-curvature samples, heading errors to points ahead, and its lateral offset. Its neural network directly selects steering and throttle or brake; it receives no data from the ideal line. The cars that travel furthest between crashes are selected by tournament, crossed, and mutated; most offspring test the furthest checkpoint while some restart from the start. Completing a full start-to-finish lap is required for a simulated lap time.</p><p class="muted">The thin blue path is a separately computed line that smooths cornering within modeled track limits, then estimates speed from grip, acceleration, and braking. Track width is 15 metres nominally, narrowed at tight bends and overlapping sections. Vehicle handling is intentionally simplified; lap times and the ideal-line comparison are simulated, not real-world records.</p></div>
+      <div><p class="eyebrow">About the data</p><h2>Mapped from real circuits.</h2><p class="muted">Circuit outlines © 2019–2025 Tomislav Bacinger, from the <a href="https://github.com/bacinger/f1-circuits">f1-circuits project</a> (MIT License). This subset was projected to local metres, locally smoothed at tight sampled corners for the simplified car model, and resampled for visualization. Calendar data is loaded from Jolpica at build time; a committed snapshot keeps the page available when that request is offline.</p><p class="muted">The labels use plain text references to Formula 1. This independent experiment is not affiliated with or endorsed by any racing series.</p></div>
+    </div>
+  </section>
+</Base>
+<script>
+  import { mount } from '../../lib/f1/app';
+  let dispose: (() => void) | undefined;
+  function mountPage() {
+    dispose?.();
+    const root = document.querySelector<HTMLElement>('[data-racing-experiment]');
+    if (root) dispose = mount(root);
+  }
+  mountPage();
+  document.addEventListener('astro:page-load', mountPage);
+  document.addEventListener('astro:before-swap', () => dispose?.());
+  window.addEventListener('pagehide', () => dispose?.());
+  window.addEventListener('pageshow', event => { if (event.persisted) mountPage(); });
+</script>
+<style>
+  .back-link { display: inline-block; margin-bottom: 2rem; text-decoration: none; }
+  .experiment-intro { max-width: 44rem; font-size: 1.15rem; }
+  .race-card { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; border-block: 1px solid var(--line); padding: 1.25rem 0; margin-top: 2rem; }
+  .race-card .eyebrow { margin: 0 0 .35rem; }
+  .race-card h2 { font-size: clamp(1.25rem, 3vw, 1.8rem); margin: 0; }
+  .race-meta { display: grid; gap: .35rem; text-align: right; color: var(--muted); font: 11px/1.5 var(--font-mono); }
+  .racing-experiment { margin-top: 1.5rem; }
+  .track-toolbar,.race-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .9rem 1.4rem; padding-block: 1rem; }
+  .track-toolbar > label:first-child { color: var(--muted); font: 10px var(--font-mono); text-transform: uppercase; }
+  select { min-height: 44px; max-width: 100%; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--text); padding: .55rem .75rem; font: inherit; }
+  .ideal-toggle { display: inline-flex; align-items: center; gap: .5rem; margin-left: auto; }
+  input { accent-color: var(--accent); }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  .canvas-frame { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+  [data-race-canvas] { width: 100%; height: clamp(340px, 53vw, 610px); display: block; }
+  .canvas-label,.map-key { position: absolute; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; font: 9px var(--font-mono); padding: .45rem .6rem; }
+  .canvas-label { top: .8rem; left: .8rem; }
+  .map-key { right: .8rem; bottom: .8rem; display: flex; align-items: center; gap: .5rem; }
+  .map-key i,.chart-heading i { width: 18px; height: 2px; background: var(--accent); }
+  .action-controls { display: flex; flex-wrap: wrap; gap: .55rem; }
+  .action-controls button { cursor: pointer; }
+  .training-count { display: grid; gap: .25rem; color: var(--muted); font-size: .75rem; }
+  .training-count input { width: 100px; min-height: 44px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--text); padding: .4rem .6rem; font: inherit; font-variant-numeric: tabular-nums; }
+  .speed-control { display: grid; gap: .3rem; color: var(--muted); font-size: .8rem; }
+  .mutation-control { flex: 1 1 190px; max-width: 280px; display: grid; gap: .25rem; font-size: .8rem; }
+  .mutation-control span { display: flex; justify-content: space-between; }
+  .mutation-control output { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .mutation-control input { min-height: 44px; width: 100%; margin: 0; cursor: pointer; }
+  .race-status { min-height: 1.5em; font-size: .85rem; margin: 0 0 .6rem; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); border-block: 1px solid var(--line); }
+  .stats-grid > div { padding: .9rem .7rem; display: grid; gap: .25rem; border-right: 1px solid var(--line); }
+  .stats-grid > div:last-child { border: 0; }
+  .stats-grid span { color: var(--muted); font: 9px var(--font-mono); text-transform: uppercase; }
+  .stats-grid small { font: inherit; text-transform: none; }
+  .stats-grid strong { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+  .comparison { font: 11px var(--font-mono); }
+  .chart-panel { border-top: 1px solid var(--line); padding-top: 1rem; }
+  .chart-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem 1rem; }
+  .chart-heading h2 { font-size: 1rem; margin: 0; }
+  .chart-heading span { display: flex; align-items: center; gap: .35rem; color: var(--muted); font: 9px var(--font-mono); }
+  .chart-heading .average { width: 9px; height: 1px; background: var(--muted); margin-left: .4rem; }
+  [data-fitness-chart] { display: block; width: 100%; height: 120px; }
+  .experiment-notes { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 3rem; padding-top: 2.5rem; margin-top: 1.5rem; border-top: 1px solid var(--line); }
+  .experiment-notes h2 { font-size: 1.4rem; margin-top: 1rem; letter-spacing: -.03em; }
+  .experiment-notes a { color: var(--accent); }
+  @media (max-width: 650px) { .race-card { align-items: start; flex-direction: column; gap: .65rem; } .race-meta { text-align: left; } .experiment-notes { grid-template-columns: 1fr; gap: 1.5rem; } .action-controls { width: 100%; } .action-controls button { font-size: 12px; padding: 12px 14px; } .stats-grid > div { padding-inline: .35rem; } .stats-grid span { font-size: 8px; } .stats-grid strong { font-size: 1rem; } .ideal-toggle { margin-left: 0; } }
+</style>

@@ -1,0 +1,177 @@
+---
+import Base from '../layouts/Base.astro';
+import { topics } from '../data/feeds';
+import { getRadarData } from '../lib/feeds';
+
+const radar = await getRadarData();
+const numberFormat = new Intl.NumberFormat('en-US');
+const updatedLabel = radar.updatedAt.toLocaleString('en-US', {
+  dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC',
+}) + ' UTC';
+---
+<Base title="Radar" description="A compact, build-time snapshot of technology, AI, homelab, Formula 1, and Microsoft headlines from public RSS and Atom feeds.">
+  <section class="container section radar-page">
+    <p class="eyebrow">Radar / A signal, not a firehose</p>
+    <h1>Worth a <span>look.</span></h1>
+    <p class="radar-intro muted">A small window onto the topics I follow. Just headlines and links—follow the source for the story.</p>
+    <div class="update-note" aria-label={`Updated ${updatedLabel}`}>
+      <span class="update-dot" aria-hidden="true"></span>
+      <span>Updated <time datetime={radar.updatedAt.toISOString()}>{updatedLabel}</time></span>
+      <span class="update-divider" aria-hidden="true">·</span>
+      <span>Refreshes about every six hours</span>
+    </div>
+
+    <nav class="topic-filters" aria-label="Filter radar topics">
+      <a class="filter-chip" href="#all" data-filter="all" aria-current="true">All <span>{numberFormat.format(Object.values(radar.itemsByTopic).reduce((sum, items) => sum + items.length, 0))}</span></a>
+      {topics.map((topic) => <a class="filter-chip" href={`#${topic.id}`} data-filter={topic.id}>{topic.label} <span>{numberFormat.format(radar.itemsByTopic[topic.id].length)}</span></a>)}
+    </nav>
+    <p class="filter-status muted" data-filter-status role="status" aria-live="polite">Showing all topics.</p>
+
+    <div class="topic-list" id="all">
+      {topics.map((topic) => {
+        const items = radar.itemsByTopic[topic.id];
+        return <section class="topic-section" id={topic.id} data-topic-section={topic.id} aria-labelledby={`${topic.id}-heading`}>
+          <header class="topic-heading">
+            <h2 id={`${topic.id}-heading`}>{topic.label}</h2>
+            <p class="topic-blurb muted">{topic.blurb}</p>
+          </header>
+          {items.length > 0 ? <ol class="headline-list">
+            {items.map((item) => <li class="headline-row">
+              <a class="headline-link" href={item.url} target="_blank" rel="noopener noreferrer">{item.title}<span class="external-mark" aria-hidden="true">↗</span></a>
+              <div class="headline-meta"><span>{item.source}</span><span aria-hidden="true">·</span>
+                {item.published ? <time datetime={item.published} data-relative-time>{new Date(item.published).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC</time> : <span>Time unavailable</span>}
+              </div>
+            </li>)}
+          </ol> : <p class="empty-state">Nothing on this frequency right now. Check back after the next refresh.</p>}
+        </section>;
+      })}
+    </div>
+
+    <section class="sources-section" aria-labelledby="sources-heading">
+      <p class="eyebrow">Signal sources</p>
+      <h2 id="sources-heading">A note on the feeds.</h2>
+      <p class="muted sources-copy">Public RSS and Atom feeds are read during the site build. Feeds occasionally move, time out, or go quiet; one source being unavailable never holds up the page.</p>
+      <ul class="source-list">
+        {radar.feedResults.map(({ feed, status, count }) => <li>
+          <a href={feed.homepage} target="_blank" rel="noopener noreferrer">{feed.label}<span class="external-mark" aria-hidden="true">↗</span></a>
+          <span class="source-topic">{topics.find(({ id }) => id === feed.topic)?.label}</span>
+          <span class:list={['source-health', status]}>{status === 'ok' ? `${count} headlines` : 'Temporarily unavailable'}</span>
+        </li>)}
+      </ul>
+    </section>
+    <noscript><p class="noscript-note muted">Topic filters work as section links without JavaScript. Enable JavaScript for in-place filtering and relative time labels.</p></noscript>
+  </section>
+</Base>
+<script>
+  let filterController: AbortController | undefined;
+  let relativeTimer: ReturnType<typeof setInterval> | undefined;
+
+  function mountRadar() {
+    filterController?.abort();
+    if (relativeTimer) clearInterval(relativeTimer);
+    filterController = new AbortController();
+    const { signal } = filterController;
+    const chips = [...document.querySelectorAll<HTMLAnchorElement>('[data-filter]')];
+    const sections = [...document.querySelectorAll<HTMLElement>('[data-topic-section]')];
+    const status = document.querySelector<HTMLElement>('[data-filter-status]');
+    const times = [...document.querySelectorAll<HTMLTimeElement>('[data-relative-time]')];
+
+    function updateRelativeTimes() {
+      const now = Date.now();
+      for (const time of times) {
+        const date = Date.parse(time.dateTime);
+        if (!Number.isFinite(date)) continue;
+        const minutes = Math.round((date - now) / 60_000);
+        const absoluteMinutes = Math.abs(minutes);
+        let amount: number;
+        let unit: Intl.RelativeTimeFormatUnit;
+        if (absoluteMinutes < 60) { amount = minutes; unit = 'minute'; }
+        else if (absoluteMinutes < 1_440) { amount = Math.round(minutes / 60); unit = 'hour'; }
+        else { amount = Math.round(minutes / 1_440); unit = 'day'; }
+        time.textContent = `${new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(amount, unit)} · ${new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}`;
+      }
+    }
+
+    function applyFilter(filter: string, updateHash: boolean) {
+      const validFilter = filter === 'all' || sections.some((section) => section.dataset.topicSection === filter);
+      const selected = validFilter ? filter : 'all';
+      for (const section of sections) section.hidden = selected !== 'all' && section.dataset.topicSection !== selected;
+      for (const chip of chips) {
+        const active = chip.dataset.filter === selected;
+        if (active) chip.setAttribute('aria-current', 'true');
+        else chip.removeAttribute('aria-current');
+      }
+      if (status) status.textContent = selected === 'all' ? 'Showing all topics.' : `Showing ${chips.find((chip) => chip.dataset.filter === selected)?.textContent?.trim() ?? selected}.`;
+      if (updateHash && window.location.hash !== `#${selected}`) history.replaceState(null, '', `#${selected}`);
+    }
+
+    for (const chip of chips) chip.addEventListener('click', (event) => {
+      event.preventDefault();
+      applyFilter(chip.dataset.filter ?? 'all', true);
+    }, { signal });
+    window.addEventListener('hashchange', () => applyFilter(window.location.hash.slice(1) || 'all', false), { signal });
+    applyFilter(window.location.hash.slice(1) || 'all', false);
+    updateRelativeTimes();
+    relativeTimer = setInterval(updateRelativeTimes, 60_000);
+  }
+
+  document.addEventListener('astro:page-load', mountRadar);
+  mountRadar();
+  document.addEventListener('astro:before-swap', () => {
+    filterController?.abort();
+    if (relativeTimer) clearInterval(relativeTimer);
+  });
+</script>
+<style>
+  .radar-page { max-width: 940px; }
+  .radar-page h1 span { color: var(--accent); }
+  .radar-intro { max-width: 620px; font-size: 1.08rem; }
+  .update-note { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 24px; color: var(--muted); font: 10px/1.6 var(--font-mono); letter-spacing: .035em; text-transform: uppercase; }
+  .update-note time { color: var(--text); }
+  .update-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: var(--aurora-teal); box-shadow: 0 0 0 3px var(--ambient); }
+  .update-divider { color: var(--accent); }
+  .topic-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 34px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .filter-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 7px 13px; border: 1px solid var(--line); border-radius: 999px; color: var(--text); background: var(--panel); font-size: 12px; font-weight: 650; text-decoration: none; }
+  .filter-chip span { color: var(--muted); font: 10px var(--font-mono); }
+  .filter-chip:hover, .filter-chip[aria-current="true"] { border-color: var(--accent); color: var(--text); background: var(--soft); text-decoration: none; }
+  .filter-chip[aria-current="true"] span { color: var(--accent); }
+  .filter-status { min-height: 1.5em; margin: 10px 0 0; font-size: 12px; }
+  .topic-section { padding-top: 40px; scroll-margin-top: 120px; }
+  .topic-section[hidden] { display: none; }
+  .topic-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; padding-bottom: 17px; border-bottom: 1px solid var(--line); }
+  .topic-heading h2 { margin: 0; font-size: clamp(1.45rem, 4vw, 2rem); }
+  .topic-blurb { max-width: 390px; margin: 0 0 3px; text-align: right; font-size: 13px; }
+  .headline-list { margin: 0; padding: 0; list-style: none; }
+  .headline-row { padding: 17px 3px 15px; border-bottom: 1px solid var(--line); }
+  .headline-link { display: inline; color: var(--text); font-size: 15px; font-weight: 650; line-height: 1.55; text-decoration: none; overflow-wrap: anywhere; }
+  .headline-link:hover { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  .external-mark { display: inline-block; margin-left: 6px; color: var(--accent); font-size: .85em; }
+  .headline-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; color: var(--muted); font: 10px/1.6 var(--font-mono); }
+  .headline-meta time { font-variant-numeric: tabular-nums; }
+  .empty-state { margin: 0; padding: 22px 17px; border-bottom: 1px solid var(--line); color: var(--muted); background: var(--ambient); font-size: 13px; }
+  .sources-section { margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--line); }
+  .sources-section h2 { font-size: 1.55rem; }
+  .sources-copy { max-width: 650px; font-size: 13px; }
+  .source-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 26px; margin: 22px 0 0; padding: 0; list-style: none; }
+  .source-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; min-width: 0; padding: 12px 0; border-top: 1px solid var(--line); }
+  .source-list li > a { min-width: 0; color: var(--text); font-size: 12px; font-weight: 650; text-decoration: none; overflow-wrap: anywhere; }
+  .source-list li > a:hover { color: var(--accent); }
+  .source-topic { grid-column: 1; color: var(--muted); font: 9px var(--font-mono); text-transform: uppercase; }
+  .source-health { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--muted); font: 9px var(--font-mono); text-align: right; }
+  .source-health.ok { color: var(--accent); }
+  .source-health.error { color: var(--muted); }
+  .noscript-note { margin-top: 28px; font-size: 12px; }
+  @media (max-width: 600px) {
+    .radar-page { padding-top: 52px; }
+    .radar-page .eyebrow { font-size: 10px; }
+    .update-note { gap: 7px; font-size: 9px; }
+    .topic-filters { gap: 7px; margin-top: 26px; }
+    .filter-chip { min-height: 42px; padding-inline: 10px; font-size: 11px; }
+    .topic-heading { align-items: start; flex-direction: column; gap: 8px; }
+    .topic-blurb { max-width: none; text-align: left; font-size: 12px; }
+    .headline-row { padding-block: 15px; }
+    .headline-link { font-size: 14px; }
+    .headline-meta { gap: 6px; font-size: 9px; }
+    .source-list { grid-template-columns: 1fr; }
+  }
+</style>

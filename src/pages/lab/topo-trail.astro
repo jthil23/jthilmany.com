@@ -1,36 +1,104 @@
 ---
 import Base from '../../layouts/Base.astro';
 ---
-<Base title="Topo trail · Lab" description="Generate a topographic contour map, trace a winding trail, and download your own terrain as a PNG. An interactive local canvas experiment.">
+<Base title="Topo trail · Lab" description="Build a trail across generated terrain or real elevation data, then compare three pathfinding algorithms.">
   <section class="container section">
     <a class="back-link muted" href="/lab/">← Back to the lab</a>
-    <p class="eyebrow">Lab / 002</p>
+    <p class="eyebrow">Lab / 001</p>
     <h1>Find your own <span>way.</span></h1>
-    <p class="experiment-intro muted">A landscape that doesn’t exist. A trail that takes the long way. Generate a little terrain, follow the contours, and see where it leads.</p>
+    <p class="experiment-intro muted">A good trail doesn’t climb every slope head-on. Build one across a made-up mountain range or real elevation tiles, then compare how three search algorithms choose their way through the ground.</p>
     <div class="topo-experiment" data-topo-experiment>
-      <div class="canvas-frame">
-        <canvas data-topo-canvas role="img" aria-label="Generative topographic contour map with an optional winding trail. This is imaginary terrain, not a real map."></canvas>
-        <span class="canvas-label" aria-hidden="true">Imaginary terrain / local canvas</span>
-        <div class="map-key" aria-hidden="true"><span><i></i>Contour</span><span><i></i>Trail</span></div>
-      </div>
-      <div class="topo-controls">
+      <div class="source-row">
+        <label class="field-label">Terrain source
+          <select data-source aria-label="Terrain source">
+            <option value="generated">Generated terrain</option>
+            <option value="real">Real places</option>
+          </select>
+        </label>
+        <label class="field-label place-select" data-place-wrap hidden>Place
+          <select data-place aria-label="Choose a real place"></select>
+        </label>
         <div class="action-controls">
-          <button class="button" type="button" data-topo-reseed>New terrain</button>
-          <button class="button secondary" type="button" data-topo-trail aria-pressed="true">Trail on</button>
-          <button class="button secondary" type="button" data-topo-download>Download PNG ↓</button>
+          <button class="button secondary" type="button" data-new-terrain>New terrain</button>
+          <button class="button secondary" type="button" data-random-place hidden>Random spot</button>
         </div>
-        <label class="density-control"><span>Contour density <output data-topo-density-output>24</output></span><input type="range" data-topo-density min="12" max="40" step="1" value="24" aria-label="Contour density" /></label>
       </div>
-      <p class="topo-status muted" data-topo-status role="status" aria-live="polite">Preparing your terrain…</p>
-      <noscript><p class="muted">JavaScript is needed to generate the map. Read about the experiment below, or explore the rest of the site without it.</p></noscript>
+      <div class="workspace">
+        <div class="map-column">
+          <div class="canvas-frame" data-canvas-frame>
+            <canvas data-topo-canvas role="img" aria-label="Topographic map. Place trailhead A and destination B by clicking or tapping the map."></canvas>
+            <div class="marker-layer" data-markers aria-label="Trail endpoints">
+              <button class="endpoint endpoint-a" type="button" data-endpoint="start" aria-label="Trailhead A. Use arrow keys to move." hidden>A</button>
+              <button class="endpoint endpoint-b" type="button" data-endpoint="goal" aria-label="Destination B. Use arrow keys to move." hidden>B</button>
+            </div>
+            <div class="map-label" data-map-label>Generated terrain</div>
+            <div class="map-view" data-view3d hidden aria-label="Interactive three-dimensional terrain view"></div>
+            <div class="view-fallback" data-view-error role="status" hidden></div>
+            <div class="view-tools">
+              <button class="button secondary" type="button" data-toggle-view aria-pressed="false">Open 3D view</button>
+            </div>
+          </div>
+          <p class="map-detail muted" data-map-detail>Simulated elevations · generated at a local scale</p>
+          <p class="attribution muted" data-attribution hidden>Elevation: Terrain Tiles on AWS Open Data (Mapzen; sources incl. USGS 3DEP, SRTM, GMTED, ETOPO1).</p>
+          <details class="attribution-notes" data-attribution-notes hidden>
+            <summary>Elevation data credits</summary>
+            <p>Terrain tiles include data from multiple public sources. Required source credits include: ArcticDEM, created from DigitalGlobe imagery and funded under NSF awards 1043681, 1559691, and 1542736; Australia, © Commonwealth of Australia (Geoscience Australia) 2017; Austria, © offene Daten Österreichs – Digitales Geländemodell (DGM) Österreich; Canada, information licensed under the Open Government Licence – Canada; Europe, Copernicus-funded EU-DEM; global ETOPO1, NOAA; Mexico, INEGI, Continental relief, 2016; New Zealand, Copyright 2011 Crown copyright (c) Land Information New Zealand and the New Zealand Government; Norway, © Kartverket; United Kingdom, © Environment Agency copyright and/or database right 2015; United States 3DEP and global GMTED2010 and SRTM, courtesy of the U.S. Geological Survey.</p>
+            <p>Source: <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noreferrer">Mapzen terrain attribution guidance</a>. Tiles are for terrain visualization, not navigation.</p>
+          </details>
+          <div class="route-legend" data-legend aria-label="Route color legend"></div>
+        </div>
+        <aside class="control-panel" aria-label="Trail planning controls">
+          <div class="panel-block">
+            <p class="eyebrow">01 / Route</p>
+            <p class="control-copy">Click or tap once for trailhead A, then again for destination B. Drag either marker to adjust it; focus a marker and use arrow keys to nudge it.</p>
+            <div class="action-controls">
+              <button class="button secondary" type="button" data-random-endpoints>Random endpoints</button>
+              <button class="button" type="button" data-run>Find trail</button>
+            </div>
+          </div>
+          <label class="range-control"><span>Maximum grade <output data-grade-output>25%</output></span><input type="range" data-grade min="5" max="40" step="1" value="25" aria-label="Maximum allowed trail grade" /></label>
+          <div class="panel-block">
+            <p class="eyebrow">02 / Search strategy</p>
+            <fieldset class="algorithm-choice">
+              <legend class="sr-only">Pathfinding algorithm</legend>
+              <label><input type="radio" name="algorithm" value="astar" checked /><span>A*</span></label>
+              <label><input type="radio" name="algorithm" value="dijkstra" /><span>Dijkstra</span></label>
+              <label><input type="radio" name="algorithm" value="greedy" /><span>Greedy</span></label>
+            </fieldset>
+            <button class="button secondary compare-button" type="button" data-compare aria-pressed="false">Compare all three</button>
+          </div>
+          <div class="panel-block results-block">
+            <div class="results-heading"><p class="eyebrow">03 / Results</p><button class="text-button" type="button" data-replay>Replay search</button></div>
+            <p class="results-status muted" data-topo-status role="status" aria-live="polite">Preparing terrain…</p>
+            <div class="table-wrap" data-results-wrap hidden>
+              <table class="results-table">
+                <thead><tr><th scope="col">Method</th><th scope="col">Explored</th><th scope="col">Time (ms)</th><th scope="col">Length</th><th scope="col">Gain</th><th scope="col">Max grade</th></tr></thead>
+                <tbody data-results></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="action-controls bottom-actions">
+            <button class="button secondary" type="button" data-download>Download PNG ↓</button>
+            <label class="range-control compact" data-exaggeration-wrap hidden><span>Vertical exaggeration <output data-exaggeration-output>1.5×</output></span><input type="range" data-exaggeration min="0.7" max="3" step="0.1" value="1.5" aria-label="Vertical exaggeration" /></label>
+          </div>
+        </aside>
+      </div>
+      <noscript><p class="muted">JavaScript is needed to build terrain and search for routes. The notes below explain what each algorithm does.</p></noscript>
     </div>
     <div class="experiment-notes">
-      <div><p class="eyebrow">01 / The terrain</p><h2>A few rules. Infinite landscapes.</h2><p class="muted">Layers of seeded value noise form an imaginary height field. Each contour follows a constant height, found by intersecting small triangles in the field. Wider gaps feel gentle; close lines suggest steeper ground. There are no real elevations or geographic coordinates.</p></div>
-      <div><p class="eyebrow">02 / The way through</p><h2>Take the scenic route.</h2><p class="muted">The winding trail echoes the mountain path in my logo. Reseed the landscape, change the number of contours, or hide the trail. Download saves exactly the map, without the controls. Everything stays in your browser.</p><p class="muted">With reduced motion enabled, the whole trail appears immediately. All controls work by keyboard; use the arrow keys to adjust density. The map follows the site’s light or dark theme.</p></div>
+      <div><p class="eyebrow">01 / Terrain</p><h2>Ground with a little character.</h2><p class="muted">Generated terrain combines broad hills, ridged noise, domain warping, and erosion into a fictional height field; its elevations and 60 m cell scale are simulated. Real-place mode samples AWS Terrain Tiles in Terrarium format, so the colors and scale describe actual elevation data for the selected region.</p><p class="muted">Hypsometric color, hillshade, and index contours make the relief easier to read. Real tiles are cited below the map and in downloaded PNGs; they are terrain imagery, not hiking directions.</p></div>
+      <div><p class="eyebrow">02 / Find a way</p><h2>Three ways through the hills.</h2><p class="muted"><strong>A*</strong> expands likely routes first, using a distance-and-climb estimate to guide its search. <strong>Dijkstra</strong> spreads outward by accumulated trail cost without a guess about the destination, while <strong>Greedy best-first</strong> follows the closest-looking direction and can trade optimality for fewer explored cells.</p><p class="muted">The grid connects each cell to its eight neighbors. A grade above your limit is blocked; otherwise horizontal distance, ascent, and steepness contribute to the cost. Compare runs each strategy on the same endpoints so you can inspect their routes, explored areas, and measurements side by side.</p></div>
     </div>
   </section>
 </Base>
 <script>
+  import { generateTerrain, type HeightField } from '../../lib/topo/terrain';
+  import { loadPlace, PLACES, randomPlace, TERRAIN_ATTRIBUTION, type TerrainPlace } from '../../lib/topo/tiles';
+  import { createSearchClient, type SearchClient } from '../../lib/topo/searchClient';
+  import { ALGORITHMS, ALGORITHM_LABELS, chooseConnectedEndpoints, type Algorithm, type SearchResult } from '../../lib/topo/pathfinding';
+  import { renderMap, exportMap, ROUTE_COLORS, type MapState } from '../../lib/topo/render2d';
+  import type { Terrain3DView } from '../../lib/topo/view3d';
+
   let disposeTopo: (() => void) | undefined;
   function mountTopo() {
     disposeTopo?.();
@@ -38,251 +106,472 @@ import Base from '../../layouts/Base.astro';
     const root = document.querySelector<HTMLElement>('[data-topo-experiment]');
     if (!root) return;
     const canvas = root.querySelector<HTMLCanvasElement>('[data-topo-canvas]');
-    const reseed = root.querySelector<HTMLButtonElement>('[data-topo-reseed]');
-    const trailButton = root.querySelector<HTMLButtonElement>('[data-topo-trail]');
-    const download = root.querySelector<HTMLButtonElement>('[data-topo-download]');
-    const densityInput = root.querySelector<HTMLInputElement>('[data-topo-density]');
-    const densityOutput = root.querySelector<HTMLOutputElement>('[data-topo-density-output]');
+    const frame = root.querySelector<HTMLElement>('[data-canvas-frame]');
     const status = root.querySelector<HTMLElement>('[data-topo-status]');
-    if (!canvas || !reseed || !trailButton || !download || !densityInput || !densityOutput || !status) return;
-    const context = canvas.getContext('2d');
-    const backdrop = document.createElement('canvas');
-    const backgroundContext = backdrop.getContext('2d');
-    if (!context || !backgroundContext) {
-      status.textContent = 'Canvas is unavailable in this browser. The explanation below is still available.';
-      root.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input').forEach(control => { control.disabled = true; });
-      return;
-    }
-    const ctx = context;
-    const background = backgroundContext;
+    const sourceSelect = root.querySelector<HTMLSelectElement>('[data-source]');
+    const placeSelect = root.querySelector<HTMLSelectElement>('[data-place]');
+    const placeWrap = root.querySelector<HTMLElement>('[data-place-wrap]');
+    const randomPlaceButton = root.querySelector<HTMLButtonElement>('[data-random-place]');
+    const terrainButton = root.querySelector<HTMLButtonElement>('[data-new-terrain]');
+    const randomEndpoints = root.querySelector<HTMLButtonElement>('[data-random-endpoints]');
+    const runButton = root.querySelector<HTMLButtonElement>('[data-run]');
+    const compareButton = root.querySelector<HTMLButtonElement>('[data-compare]');
+    const replayButton = root.querySelector<HTMLButtonElement>('[data-replay]');
+    const downloadButton = root.querySelector<HTMLButtonElement>('[data-download]');
+    const gradeInput = root.querySelector<HTMLInputElement>('[data-grade]');
+    const gradeOutput = root.querySelector<HTMLOutputElement>('[data-grade-output]');
+    const details = root.querySelector<HTMLElement>('[data-map-detail]');
+    const mapLabel = root.querySelector<HTMLElement>('[data-map-label]');
+    const attribution = root.querySelector<HTMLElement>('[data-attribution]');
+    const attributionNotes = root.querySelector<HTMLDetailsElement>('[data-attribution-notes]');
+    const resultsBody = root.querySelector<HTMLElement>('[data-results]');
+    const resultsWrap = root.querySelector<HTMLElement>('[data-results-wrap]');
+    const legend = root.querySelector<HTMLElement>('[data-legend]');
+    const startMarker = root.querySelector<HTMLButtonElement>('[data-endpoint="start"]');
+    const goalMarker = root.querySelector<HTMLButtonElement>('[data-endpoint="goal"]');
+    const viewButton = root.querySelector<HTMLButtonElement>('[data-toggle-view]');
+    const viewRoot = root.querySelector<HTMLElement>('[data-view3d]');
+    const viewError = root.querySelector<HTMLElement>('[data-view-error]');
+    const exaggerationWrap = root.querySelector<HTMLElement>('[data-exaggeration-wrap]');
+    const exaggerationInput = root.querySelector<HTMLInputElement>('[data-exaggeration]');
+    const exaggerationOutput = root.querySelector<HTMLOutputElement>('[data-exaggeration-output]');
+    if (!canvas || !frame || !status || !sourceSelect || !placeSelect || !terrainButton || !randomEndpoints || !runButton || !compareButton || !replayButton || !downloadButton || !gradeInput || !gradeOutput || !resultsBody || !resultsWrap || !legend || !startMarker || !goalMarker || !viewButton || !viewRoot || !viewError || !exaggerationInput || !exaggerationOutput) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { status.textContent = 'Canvas is unavailable. The experiment notes are still available below.'; return; }
     const events = new AbortController();
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const seedBuffer = new Uint32Array(1);
-    const trailPoints = new Float32Array(242);
-    const crossingX = new Float64Array(3);
-    const crossingY = new Float64Array(3);
-    let seed = crypto.getRandomValues(seedBuffer)[0];
-    let width = 0;
-    let height = 0;
-    let ratio = 1;
-    let columns = 0;
-    let rows = 0;
-    let field = new Float32Array(0);
-    let density = 24;
-    let showTrail = true;
-    let frame = 0;
-    let inputFrame = 0;
-    let traceStarted = 0;
-    let trailColor = '';
-    let backgroundColor = '';
+    let seed = crypto.getRandomValues(new Uint32Array(1))[0];
+    let field: HeightField = generateTerrain({ seed });
+    let searchClient: SearchClient | null = null;
+    let start: number | null = null;
+    let goal: number | null = null;
+    let routes: SearchResult[] = [];
+    let currentExplored: Partial<Record<Algorithm, Int32Array>> = {};
+    let isCompare = false;
+    let running = false;
+    let loading = false;
+    let view3d: Terrain3DView | null = null;
+    let in3d = false;
+    let renderFrame = 0;
+    let searchFrame = 0;
+    let pendingSearch = 0;
+    let frontierAnimationCancel: (() => void) | null = null;
     let destroyed = false;
+    let activeDrag: 'start' | 'goal' | null = null;
+    let searchRevision = 0;
+    let rerunRequested = false;
+    let sourceNotice = '';
+    for (const algorithm of ALGORITHMS) {
+      const item = document.createElement('span');
+      item.className = 'legend-item';
+      item.innerHTML = `<i style="--route-color:${ROUTE_COLORS[algorithm]}"></i>${ALGORITHM_LABELS[algorithm]}`;
+      legend.append(item);
+    }
+    let terrainController = new AbortController();
 
-    function lattice(x: number, y: number) {
-      let hash = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ seed;
-      hash = Math.imul(hash ^ (hash >>> 13), 1274126177);
-      return ((hash ^ (hash >>> 16)) >>> 0) / 4294967295 * 2 - 1;
+    for (const place of PLACES) {
+      const option = document.createElement('option');
+      option.value = place.id;
+      option.textContent = place.name;
+      placeSelect.append(option);
     }
-    function noise(x: number, y: number) {
-      const ix = Math.floor(x);
-      const iy = Math.floor(y);
-      const fx = x - ix;
-      const fy = y - iy;
-      const sx = fx * fx * (3 - 2 * fx);
-      const sy = fy * fy * (3 - 2 * fy);
-      const top = lattice(ix, iy) * (1 - sx) + lattice(ix + 1, iy) * sx;
-      const bottom = lattice(ix, iy + 1) * (1 - sx) + lattice(ix + 1, iy + 1) * sx;
-      return top * (1 - sy) + bottom * sy;
+
+    function makeState(): MapState {
+      return { field, routes, explored: currentExplored, start, goal, label: field.name, detail: field.detail, attribution: TERRAIN_ATTRIBUTION };
     }
-    function buildField() {
-      columns = Math.max(32, Math.ceil(width / 9));
-      rows = Math.max(32, Math.ceil(height / 9));
-      field = new Float32Array((columns + 1) * (rows + 1));
-      const aspect = width / height;
-      for (let y = 0; y <= rows; y++) {
-        for (let x = 0; x <= columns; x++) {
-          const nx = x / columns * 3.4 * aspect;
-          const ny = y / rows * 3.4;
-          field[y * (columns + 1) + x] = .5 + noise(nx, ny) * .27 + noise(nx * 2 + 17, ny * 2 + 9) * .14 + noise(nx * 4 + 7, ny * 4 + 23) * .07 + noise(nx * 8 + 31, ny * 8 + 11) * .035;
-        }
-      }
-      const phase = (seed % 1000) / 1000 * Math.PI * 2;
-      for (let point = 0; point <= 120; point++) {
-        const t = point / 120;
-        trailPoints[point * 2] = width * (.5 + Math.sin(t * Math.PI * 3.4 + phase) * .19 + Math.sin(t * Math.PI * 7.5 - phase) * .045);
-        trailPoints[point * 2 + 1] = height * (.86 - t * .72);
-      }
+    function scheduleRender() {
+      if (renderFrame) return;
+      renderFrame = requestAnimationFrame(() => {
+        renderFrame = 0;
+        if (destroyed) return;
+        if (in3d) { view3d?.update(makeState(), Number(exaggerationInput!.value)); return; }
+        renderMap(canvas!, makeState());
+        positionMarkers();
+      });
     }
-    // Splitting each grid cell into two triangles resolves saddle cases without
-    // ambiguous contour connections. Intersections are reused across all cells.
-    function crossing(level: number, index: number, x1: number, y1: number, v1: number, x2: number, y2: number, v2: number) {
-      if ((v1 >= level) === (v2 >= level)) return index;
-      const t = (level - v1) / (v2 - v1);
-      crossingX[index] = x1 + (x2 - x1) * t;
-      crossingY[index] = y1 + (y2 - y1) * t;
-      return index + 1;
-    }
-    function triangle(path: Path2D, level: number, ax: number, ay: number, av: number, bx: number, by: number, bv: number, cx: number, cy: number, cv: number) {
-      let count = crossing(level, 0, ax, ay, av, bx, by, bv);
-      count = crossing(level, count, bx, by, bv, cx, cy, cv);
-      count = crossing(level, count, cx, cy, cv, ax, ay, av);
-      if (count === 2) {
-        path.moveTo(crossingX[0], crossingY[0]);
-        path.lineTo(crossingX[1], crossingY[1]);
-      }
-    }
-    function buildBackdrop() {
-      const styles = getComputedStyle(document.documentElement);
-      backgroundColor = styles.getPropertyValue('--bg').trim();
-      trailColor = styles.getPropertyValue('--text').trim();
-      background.globalAlpha = 1;
-      background.fillStyle = backgroundColor;
-      background.fillRect(0, 0, width, height);
-      const minor = new Path2D();
-      const major = new Path2D();
-      const dx = width / columns;
-      const dy = height / rows;
-      for (let contour = 0; contour < density; contour++) {
-        const level = .15 + contour / (density - 1) * .7;
-        const path = contour % 4 === 0 ? major : minor;
-        for (let y = 0; y < rows; y++) {
-          const ay = y * dy;
-          const by = (y + 1) * dy;
-          for (let x = 0; x < columns; x++) {
-            const ax = x * dx;
-            const bx = (x + 1) * dx;
-            const index = y * (columns + 1) + x;
-            const a = field[index];
-            const b = field[index + 1];
-            const c = field[index + columns + 2];
-            const d = field[index + columns + 1];
-            triangle(path, level, ax, ay, a, bx, ay, b, bx, by, c);
-            triangle(path, level, ax, ay, a, bx, by, c, ax, by, d);
-          }
-        }
-      }
-      background.strokeStyle = styles.getPropertyValue('--accent').trim();
-      background.lineWidth = .8;
-      background.globalAlpha = .4;
-      background.stroke(minor);
-      background.lineWidth = 1.2;
-      background.globalAlpha = .75;
-      background.stroke(major);
-      background.globalAlpha = 1;
-    }
-    function draw(progress = 1) {
-      ctx.clearRect(0, 0, width, height);
-      ctx.drawImage(backdrop, 0, 0, width, height);
-      if (!showTrail) return;
-      const end = Math.min(120, Math.floor(progress * 120));
-      ctx.beginPath();
-      ctx.moveTo(trailPoints[0], trailPoints[1]);
-      for (let point = 1; point <= end; point++) ctx.lineTo(trailPoints[point * 2], trailPoints[point * 2 + 1]);
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = backgroundColor;
-      ctx.lineWidth = 6;
-      ctx.stroke();
-      ctx.strokeStyle = trailColor;
-      ctx.lineWidth = 2.2;
-      ctx.stroke();
-      for (let endpoint = 0; endpoint < 2; endpoint++) {
-        const point = endpoint === 0 ? 0 : end;
-        ctx.beginPath();
-        ctx.arc(trailPoints[point * 2], trailPoints[point * 2 + 1], point === 0 ? 4 : 5, 0, Math.PI * 2);
-        ctx.fillStyle = backgroundColor;
-        ctx.fill();
-        ctx.strokeStyle = trailColor;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
-    }
-    function stopTrace() { cancelAnimationFrame(frame); frame = 0; traceStarted = 0; }
-    function trace(time: number) {
-      frame = 0;
-      if (destroyed) return;
-      if (!traceStarted) traceStarted = time;
-      const progress = Math.min(1, (time - traceStarted) / 1400);
-      draw(progress);
-      if (progress < 1) frame = requestAnimationFrame(trace);
-    }
-    function render(animate = false) {
-      stopTrace();
-      buildBackdrop();
-      if (animate && showTrail && !motion.matches && !document.hidden) {
-        draw(0);
-        frame = requestAnimationFrame(trace);
-      } else draw();
-    }
-    function resize() {
+    function cellFromPoint(clientX: number, clientY: number): number | null {
       const bounds = canvas!.getBoundingClientRect();
-      const nextWidth = Math.round(bounds.width);
-      const nextHeight = Math.round(bounds.height);
-      const nextRatio = Math.min(window.devicePixelRatio || 1, 2);
-      if (nextWidth <= 0 || nextHeight <= 0 || (nextWidth === width && nextHeight === height && nextRatio === ratio)) return;
-      width = nextWidth;
-      height = nextHeight;
-      ratio = nextRatio;
-      canvas!.width = backdrop.width = Math.round(width * ratio);
-      canvas!.height = backdrop.height = Math.round(height * ratio);
-      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-      background.setTransform(ratio, 0, 0, ratio, 0, 0);
-      buildField();
-      render();
+      if (!bounds.width || !bounds.height) return null;
+      const x = Math.round((clientX - bounds.left) / bounds.width * (field.w - 1));
+      const y = Math.round((clientY - bounds.top) / bounds.height * (field.h - 1));
+      if (x < 0 || y < 0 || x >= field.w || y >= field.h) return null;
+      return y * field.w + x;
     }
-    reseed.addEventListener('click', () => {
-      seed = crypto.getRandomValues(seedBuffer)[0];
-      buildField();
-      render(true);
-      status.textContent = 'New imaginary terrain generated. Adjust the contours or download your map.';
-    }, { signal: events.signal });
-    densityInput.addEventListener('input', () => {
-      density = Number(densityInput.value);
-      densityOutput.value = String(density);
-      densityInput.setAttribute('aria-valuetext', `${density} contour levels`);
-      if (!inputFrame) inputFrame = requestAnimationFrame(() => { inputFrame = 0; render(); });
-    }, { signal: events.signal });
-    trailButton.addEventListener('click', () => {
-      showTrail = !showTrail;
-      trailButton.setAttribute('aria-pressed', String(showTrail));
-      trailButton.textContent = showTrail ? 'Trail on' : 'Trail off';
-      stopTrace();
-      draw();
-      status.textContent = showTrail ? 'The trail is visible.' : 'Trail hidden. Explore the contours on their own.';
-    }, { signal: events.signal });
-    download.addEventListener('click', () => {
-      stopTrace();
-      if (inputFrame) { cancelAnimationFrame(inputFrame); inputFrame = 0; render(); }
-      draw();
-      canvas.toBlob(blob => {
-        if (!blob || destroyed) {
-          if (!destroyed) status.textContent = 'The PNG could not be created. Try generating new terrain.';
-          return;
+    function setEndpoint(which: 'start' | 'goal', cell: number | null) {
+      if (cell !== null && field.water?.[cell]) { status!.textContent = 'That point is in water. Choose a dry cell for the endpoint.'; return; }
+      searchRevision++;
+      if (which === 'start') start = cell; else goal = cell;
+      currentExplored = {};
+      updateResults([]);
+      updateStatus('Endpoint moved. Search again to find a trail.');
+      scheduleRender();
+      if (start !== null && goal !== null && !loading) scheduleSearch();
+    }
+    function positionMarker(button: HTMLButtonElement, cell: number | null) {
+      button.hidden = cell === null;
+      if (cell === null) return;
+      const x = cell % field.w;
+      const y = Math.floor(cell / field.w);
+      button.style.left = `${x / (field.w - 1) * 100}%`;
+      button.style.top = `${y / (field.h - 1) * 100}%`;
+    }
+    function positionMarkers() {
+      positionMarker(startMarker!, start);
+      positionMarker(goalMarker!, goal);
+    }
+    function updateStatus(message: string) { status!.textContent = sourceNotice ? `${sourceNotice} ${message}` : message; }
+    function updateMeta() {
+      if (details) details.textContent = field.detail;
+      if (mapLabel) mapLabel.textContent = field.name;
+      const isReal = !field.simulated;
+      if (attribution) attribution.hidden = !isReal;
+      if (attributionNotes) attributionNotes.hidden = !isReal;
+      sourceSelect!.value = isReal ? 'real' : 'generated';
+      const activePlace = PLACES.find(place => place.name === field.name);
+      placeWrap?.toggleAttribute('hidden', !isReal);
+      randomPlaceButton?.toggleAttribute('hidden', !isReal);
+      if (activePlace) placeSelect!.value = activePlace.id;
+    }
+    function formatDistance(meters: number): string { return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`; }
+    function updateResults(results: SearchResult[]) {
+      resultsBody!.replaceChildren();
+      resultsWrap!.hidden = results.length === 0;
+      for (const result of results) {
+        const row = document.createElement('tr');
+        const method = document.createElement('th');
+        method.scope = 'row';
+        method.textContent = ALGORITHM_LABELS[result.algorithm];
+        method.style.setProperty('--route-color', ROUTE_COLORS[result.algorithm]);
+        const values = result.path ? [String(result.nodes), result.milliseconds.toFixed(1), formatDistance(result.length), `${Math.round(result.gain)} m`, `${result.maxGrade.toFixed(1)}%`] : [String(result.nodes), result.milliseconds.toFixed(1), 'No route', '—', '—'];
+        row.append(method);
+        for (const value of values) { const cell = document.createElement('td'); cell.textContent = value; row.append(cell); }
+        resultsBody!.append(row);
+      }
+    }
+    function disposeSearch() { searchClient?.dispose(); searchClient = null; }
+    function replaceField(next: HeightField) {
+      searchRevision++;
+      disposeSearch();
+      field = next;
+      searchClient = createSearchClient(field);
+      routes = [];
+      currentExplored = {};
+      updateMeta();
+      chooseRandomEndpoints(false);
+      scheduleRender();
+    }
+    function chooseRandomEndpoints(search = true) {
+      let maxGrade = Number(gradeInput!.value);
+      let endpoints = chooseConnectedEndpoints(field, maxGrade, crypto.getRandomValues(new Uint32Array(1))[0]);
+      if (!endpoints && !field.simulated && maxGrade < 40) {
+        const relaxedGrade = 40;
+        endpoints = chooseConnectedEndpoints(field, relaxedGrade, crypto.getRandomValues(new Uint32Array(1))[0]);
+        if (endpoints) {
+          maxGrade = relaxedGrade;
+          gradeInput!.value = String(relaxedGrade);
+          gradeOutput!.value = `${relaxedGrade}%`;
+          gradeInput!.setAttribute('aria-valuetext', `${relaxedGrade} percent maximum grade`);
         }
+      }
+      searchRevision++;
+      currentExplored = {};
+      updateResults([]);
+      if (!endpoints) {
+        start = null;
+        goal = null;
+        updateStatus(`No dry endpoint pair is connected within ${maxGrade}% maximum grade. Raise the grade limit to find a route.`);
+        scheduleRender();
+        return;
+      }
+      start = endpoints.start;
+      goal = endpoints.goal;
+      scheduleRender();
+      if (search) scheduleSearch();
+    }
+    function selectedAlgorithm(): Algorithm {
+      const selected = root!.querySelector<HTMLInputElement>('input[name="algorithm"]:checked')?.value;
+      return selected === 'dijkstra' || selected === 'greedy' ? selected : 'astar';
+    }
+    function scheduleSearch() {
+      if (pendingSearch) clearTimeout(pendingSearch);
+      pendingSearch = window.setTimeout(() => {
+        pendingSearch = 0;
+        if (running) { rerunRequested = true; return; }
+        void runSearch(true);
+      }, 90);
+    }
+    async function runSearch(replay: boolean) {
+      if (running) { rerunRequested = true; return; }
+      if (loading || start === null || goal === null || destroyed) return;
+      running = true;
+      const revision = searchRevision;
+      const grade = Number(gradeInput!.value);
+      const algorithms = isCompare ? ALGORITHMS : [selectedAlgorithm()];
+      routes = [];
+      currentExplored = {};
+      resultsWrap!.hidden = true;
+      updateStatus('Searching the terrain…');
+      scheduleRender();
+      try {
+        const resultSet = await Promise.all(algorithms.map(algorithm => searchClient!.search(start!, goal!, grade, algorithm)));
+        if (destroyed || revision !== searchRevision) { rerunRequested = true; return; }
+        routes = resultSet;
+        updateResults(resultSet);
+        const failed = resultSet.filter(result => !result.path).length;
+        if (failed) updateStatus(`No route found within ${grade}% maximum grade${resultSet.length > 1 ? ` for ${failed} of ${resultSet.length} algorithms` : ''}. Try raising the grade limit or choosing new endpoints.`);
+        else updateStatus(resultSet.length > 1 ? `Compared ${resultSet.length} routes. Search frontier ${motion.matches ? 'shown without animation' : 'ready to replay'}.` : `${ALGORITHM_LABELS[resultSet[0].algorithm]} found a ${formatDistance(resultSet[0].length)} route with ${Math.round(resultSet[0].gain)} m of ascent.`);
+        if (replay && !motion.matches) await animateFrontier(resultSet);
+        scheduleRender();
+      } catch (error) {
+        if (revision !== searchRevision) rerunRequested = true;
+        else if (!destroyed) updateStatus(`The search worker stopped unexpectedly${error instanceof Error && error.message ? `: ${error.message}` : ''}. Try running the search again.`);
+      } finally {
+        running = false;
+        if (rerunRequested && !destroyed) { rerunRequested = false; scheduleSearch(); }
+      }
+    }
+    function cancelFrontierAnimation() {
+      cancelAnimationFrame(searchFrame);
+      searchFrame = 0;
+      const settle = frontierAnimationCancel;
+      frontierAnimationCancel = null;
+      settle?.();
+    }
+    async function animateFrontier(results: SearchResult[]) {
+      if (motion.matches || destroyed) return;
+      cancelFrontierAnimation();
+      currentExplored = {};
+      const lengths: Partial<Record<Algorithm, number>> = {};
+      for (const result of results) lengths[result.algorithm] = result.explored.length;
+      const longest = Math.max(0, ...Object.values(lengths));
+      let tick = 0;
+      await new Promise<void>(resolve => {
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          searchFrame = 0;
+          frontierAnimationCancel = null;
+          currentExplored = {};
+          scheduleRender();
+          resolve();
+        };
+        frontierAnimationCancel = finish;
+        const step = () => {
+          if (destroyed || motion.matches || document.hidden || tick >= longest) { finish(); return; }
+          tick += Math.max(40, Math.ceil(longest / 80));
+          for (const result of results) currentExplored[result.algorithm] = result.explored.slice(0, Math.min(tick, result.explored.length));
+          scheduleRender();
+          searchFrame = requestAnimationFrame(step);
+        };
+        searchFrame = requestAnimationFrame(step);
+      });
+    }
+    async function loadRealPlace(place: TerrainPlace) {
+      sourceNotice = '';
+      terrainController.abort();
+      const requestController = new AbortController();
+      terrainController = requestController;
+      loading = true;
+      sourceSelect!.disabled = true;
+      placeSelect!.disabled = true;
+      randomPlaceButton?.toggleAttribute('disabled', true);
+      updateStatus(`Loading elevation tiles for ${place.name}…`);
+      let succeeded = false;
+      try {
+        const loaded = await loadPlace(place, requestController.signal);
+        if (destroyed || terrainController !== requestController) return;
+        seed = (seed + 1) >>> 0;
+        replaceField(loaded);
+        succeeded = true;
+        sourceNotice = '';
+        updateStatus(`${loaded.name} ready. Place or move endpoints to plan a route.`);
+      } catch (error) {
+        if (!destroyed && terrainController === requestController && !(error instanceof DOMException && error.name === 'AbortError')) {
+          sourceSelect!.value = 'generated';
+          const fallback = generateTerrain({ seed: crypto.getRandomValues(new Uint32Array(1))[0] });
+          replaceField(fallback);
+          sourceNotice = `Could not load real elevation tiles (${error instanceof Error ? error.message : 'network error'}).`;
+          updateStatus('Generated terrain is ready instead.');
+        }
+      } finally {
+        if (terrainController === requestController) {
+          loading = false;
+          sourceSelect!.disabled = false;
+          placeSelect!.disabled = false;
+          randomPlaceButton?.removeAttribute('disabled');
+          if (succeeded && !destroyed && start !== null && goal !== null) scheduleSearch();
+        }
+      }
+    }
+    function downloadPng() {
+      const exportCanvas = exportMap(makeState());
+      exportCanvas.toBlob(blob => {
+        if (!blob || destroyed) { updateStatus('The PNG could not be created.'); return; }
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `topo-trail-${seed.toString(16)}.png`;
+        link.download = `topo-trail-${field.simulated ? seed.toString(16) : field.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`;
         link.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-        status.textContent = 'Your PNG is ready. The download contains the map only.';
+        updateStatus('PNG downloaded with terrain, routes, scale, and required elevation credits.');
       }, 'image/png');
+    }
+    function moveEndpoint(which: 'start' | 'goal', dx: number, dy: number) {
+      const current = which === 'start' ? start : goal;
+      if (current === null) return;
+      let x = current % field.w;
+      let y = Math.floor(current / field.w);
+      for (let steps = 0; steps < Math.max(field.w, field.h); steps++) {
+        x += dx; y += dy;
+        if (x < 0 || y < 0 || x >= field.w || y >= field.h) return;
+        const cell = y * field.w + x;
+        if (!field.water?.[cell]) { setEndpoint(which, cell); return; }
+      }
+    }
+
+    sourceSelect.addEventListener('change', () => {
+      if (sourceSelect!.value === 'generated') {
+        terrainController.abort();
+        sourceNotice = '';
+        seed = crypto.getRandomValues(new Uint32Array(1))[0];
+        replaceField(generateTerrain({ seed }));
+        updateStatus('New simulated terrain generated.');
+        void runSearch(true);
+      } else void loadRealPlace(PLACES.find(place => place.id === placeSelect!.value) ?? PLACES[0]);
     }, { signal: events.signal });
-    motion.addEventListener('change', () => { if (motion.matches) { stopTrace(); draw(); } }, { signal: events.signal });
-    document.addEventListener('visibilitychange', () => { if (document.hidden) { stopTrace(); draw(); } }, { signal: events.signal });
-    window.addEventListener('resize', resize, { signal: events.signal });
-    const resizeObserver = new ResizeObserver(resize);
+    placeSelect.addEventListener('change', () => { const place = PLACES.find(item => item.id === placeSelect!.value); if (place) void loadRealPlace(place); }, { signal: events.signal });
+    randomPlaceButton?.addEventListener('click', () => { const place = randomPlace(); placeSelect!.value = place.id; void loadRealPlace(place); }, { signal: events.signal });
+    terrainButton.addEventListener('click', () => {
+      terrainController.abort();
+      sourceNotice = '';
+      if (!field.simulated) { seed = crypto.getRandomValues(new Uint32Array(1))[0]; replaceField(generateTerrain({ seed })); sourceSelect!.value = 'generated'; updateStatus('New simulated terrain generated.'); void runSearch(true); return; }
+      seed = crypto.getRandomValues(new Uint32Array(1))[0]; replaceField(generateTerrain({ seed })); updateStatus('New simulated terrain generated.'); void runSearch(true);
+    }, { signal: events.signal });
+    randomEndpoints.addEventListener('click', () => chooseRandomEndpoints(true), { signal: events.signal });
+    runButton.addEventListener('click', () => void runSearch(true), { signal: events.signal });
+    compareButton.addEventListener('click', () => {
+      isCompare = !isCompare;
+      compareButton!.setAttribute('aria-pressed', String(isCompare));
+      compareButton!.textContent = isCompare ? 'Compare mode on' : 'Compare all three';
+      if (start !== null && goal !== null) {
+        if (running) rerunRequested = true;
+        else void runSearch(true);
+      }
+    }, { signal: events.signal });
+    replayButton.addEventListener('click', () => { if (routes.length) void animateFrontier(routes); else void runSearch(true); }, { signal: events.signal });
+    gradeInput.addEventListener('input', () => {
+      gradeOutput!.value = `${gradeInput!.value}%`;
+      gradeInput!.setAttribute('aria-valuetext', `${gradeInput!.value} percent maximum grade`);
+      scheduleSearch();
+    }, { signal: events.signal });
+    root.querySelectorAll<HTMLInputElement>('input[name="algorithm"]').forEach(input => input.addEventListener('change', () => { if (!isCompare) scheduleSearch(); }, { signal: events.signal }));
+    downloadButton.addEventListener('click', downloadPng, { signal: events.signal });
+    canvas.addEventListener('click', event => {
+      if (in3d) return;
+      const cell = cellFromPoint(event.clientX, event.clientY);
+      if (cell === null) return;
+      if (start !== null && goal !== null) { goal = null; setEndpoint('start', cell); return; }
+      if (start === null) setEndpoint('start', cell);
+      else setEndpoint('goal', cell);
+    }, { signal: events.signal });
+    for (const marker of [startMarker, goalMarker]) {
+      marker.addEventListener('pointerdown', event => {
+        if (event.button !== 0) return;
+        activeDrag = marker.dataset.endpoint === 'start' ? 'start' : 'goal';
+        marker.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      }, { signal: events.signal });
+      marker.addEventListener('pointermove', event => {
+        if (!activeDrag || !marker.hasPointerCapture(event.pointerId)) return;
+        const cell = cellFromPoint(event.clientX, event.clientY);
+        if (cell !== null && !field.water?.[cell]) {
+          if (activeDrag === 'start') start = cell; else goal = cell;
+          scheduleRender();
+        }
+      }, { signal: events.signal });
+      marker.addEventListener('pointerup', event => {
+        if (!activeDrag) return;
+        activeDrag = null;
+        marker.releasePointerCapture(event.pointerId);
+        searchRevision++;
+        routes = [];
+        currentExplored = {};
+        updateResults([]);
+        updateStatus('Endpoint moved. Searching…');
+        scheduleRender();
+        if (start !== null && goal !== null) scheduleSearch();
+      }, { signal: events.signal });
+      marker.addEventListener('keydown', event => {
+        const shifts: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+        const shift = shifts[event.key];
+        if (!shift) return;
+        event.preventDefault();
+        const step = event.shiftKey ? 8 : 1;
+        const which = marker.dataset.endpoint === 'start' ? 'start' : 'goal';
+        moveEndpoint(which, shift[0] * step, shift[1] * step);
+      }, { signal: events.signal });
+    }
+    viewButton.addEventListener('click', async () => {
+      if (in3d) {
+        view3d?.dispose(); view3d = null; in3d = false;
+        viewRoot!.hidden = true; canvas!.hidden = false; startMarker!.hidden = start === null; goalMarker!.hidden = goal === null;
+        exaggerationWrap?.toggleAttribute('hidden', true);
+        viewButton!.textContent = 'Open 3D view'; viewButton!.setAttribute('aria-pressed', 'false');
+        viewError!.hidden = true;
+        scheduleRender();
+        return;
+      }
+      viewError!.hidden = true;
+      viewRoot!.hidden = false;
+      viewRoot!.textContent = 'Preparing 3D terrain…';
+      canvas!.hidden = true; startMarker!.hidden = true; goalMarker!.hidden = true;
+      viewButton!.disabled = true;
+      in3d = true;
+      try {
+        // Keep the Three.js scene and renderer out of the 2D page until 3D is explicitly opened.
+        const { mount3D } = await import('../../lib/topo/view3d');
+        if (destroyed) return;
+        view3d = await mount3D(viewRoot!, makeState(), Number(exaggerationInput!.value), motion.matches);
+        in3d = true;
+        exaggerationWrap?.removeAttribute('hidden');
+        viewButton!.textContent = 'Close 3D view'; viewButton!.setAttribute('aria-pressed', 'true');
+      } catch {
+        in3d = false;
+        viewRoot!.hidden = true; canvas!.hidden = false; positionMarkers();
+        viewError!.hidden = false;
+        viewError!.textContent = 'A 3D view is not available in this browser. The 2D map and route planner are still ready.';
+      } finally { viewButton!.disabled = false; }
+    }, { signal: events.signal });
+    exaggerationInput.addEventListener('input', () => {
+      exaggerationOutput!.value = `${Number(exaggerationInput!.value).toFixed(1)}×`;
+      if (view3d) view3d.update(makeState(), Number(exaggerationInput!.value));
+    }, { signal: events.signal });
+    const resizeObserver = new ResizeObserver(() => scheduleRender());
     resizeObserver.observe(canvas);
-    const themeObserver = new MutationObserver(() => { if (width && height) render(); });
+    const themeObserver = new MutationObserver(() => { scheduleRender(); });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    resize();
-    if (!motion.matches && showTrail) { draw(0); frame = requestAnimationFrame(trace); }
-    status.textContent = 'Imaginary terrain ready. New terrain changes the seed; arrow keys adjust density.';
+    motion.addEventListener('change', () => {
+      if (motion.matches) { cancelFrontierAnimation(); currentExplored = {}; scheduleRender(); }
+    }, { signal: events.signal });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { cancelFrontierAnimation(); currentExplored = {}; scheduleRender(); } }, { signal: events.signal });
+    updateMeta();
+    searchClient = createSearchClient(field);
+    chooseRandomEndpoints(false);
+    positionMarkers();
+    scheduleRender();
+    status.textContent = 'Simulated terrain ready. Place endpoints or use the random pair, then find a trail.';
+    void runSearch(true);
     disposeTopo = () => {
       destroyed = true;
-      stopTrace();
-      cancelAnimationFrame(inputFrame);
+      cancelAnimationFrame(renderFrame);
+      cancelFrontierAnimation();
+      if (pendingSearch) clearTimeout(pendingSearch);
+      terrainController.abort();
       resizeObserver.disconnect();
       themeObserver.disconnect();
+      disposeSearch();
+      view3d?.dispose(); view3d = null;
       events.abort();
     };
   }
@@ -294,24 +583,66 @@ import Base from '../../layouts/Base.astro';
 </script>
 <style>
   .back-link { display: inline-block; margin-bottom: 2rem; text-decoration: none; }
-  .experiment-intro { max-width: 44rem; font-size: 1.15rem; }
+  .experiment-intro { max-width: 48rem; font-size: 1.15rem; }
   .topo-experiment { margin-top: 2.5rem; }
-  .canvas-frame { position: relative; border: 1px solid var(--line); border-radius: 1rem; overflow: hidden; background: var(--bg); }
-  canvas { display: block; width: 100%; height: clamp(360px, 55vw, 650px); }
-  .canvas-label { position: absolute; top: 1rem; left: 1rem; color: var(--muted); font: 9px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; background: var(--bg); border: 1px solid var(--line); padding: .5rem .7rem; border-radius: 4px; pointer-events: none; }
-  .map-key { position: absolute; bottom: 1rem; right: 1rem; display: flex; gap: 18px; padding: .5rem .7rem; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; font: 9px var(--font-mono); color: var(--muted); pointer-events: none; }
-  .map-key span { display: flex; align-items: center; gap: 7px; }
-  .map-key i { width: 18px; height: 1px; background: var(--accent); }
-  .map-key span:last-child i { background: var(--text); height: 2px; }
-  .topo-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 1.5rem 2rem; padding-top: 1.5rem; }
-  .action-controls { display: flex; flex-wrap: wrap; gap: .65rem; }
-  .action-controls button { cursor: pointer; }
-  .density-control { flex: 1; max-width: 320px; min-width: 180px; display: grid; gap: .4rem; font-size: .85rem; font-weight: 600; }
-  .density-control span { display: flex; justify-content: space-between; gap: 1rem; }
-  .density-control output { color: var(--accent); font-variant-numeric: tabular-nums; }
-  .density-control input { width: 100%; min-height: 44px; margin: 0; cursor: pointer; accent-color: var(--accent); }
-  .topo-status { font-size: .85rem; min-height: 2.5em; margin-top: 1rem; }
-  .experiment-notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3rem; padding-top: 2.5rem; margin-top: 1.5rem; border-top: 1px solid var(--line); }
-  .experiment-notes h2 { font-size: 1.4rem; margin-top: 1rem; letter-spacing: -.03em; }
-  @media (max-width: 650px) { .experiment-notes { grid-template-columns: 1fr; gap: 1.5rem; } .topo-controls { gap: 1.25rem; } .action-controls { width: 100%; } .density-control { max-width: none; } .action-controls button { font-size: 12px; padding: 12px 14px; } .canvas-label { font-size: 8px; } }
+  .source-row { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; margin-bottom: 1rem; }
+  .field-label { display: grid; gap: .4rem; min-width: min(250px, 100%); color: var(--muted); font-size: .8rem; font-weight: 650; }
+  select { min-height: 44px; padding: .55rem .8rem; border: 1px solid var(--line); border-radius: .4rem; background: var(--panel); color: var(--text); font: inherit; }
+  [hidden] { display: none !important; }
+  .workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(265px, 310px); align-items: start; gap: 1.25rem; }
+  .map-column { min-width: 0; }
+  .canvas-frame { position: relative; overflow: hidden; aspect-ratio: 4 / 3; min-height: 340px; border: 1px solid var(--line); border-radius: 1rem; background: var(--bg); isolation: isolate; }
+  [data-topo-canvas] { display: block; width: 100%; height: 100%; object-fit: fill; touch-action: manipulation; }
+  .marker-layer { position: absolute; z-index: 5; inset: 0; pointer-events: none; }
+  .endpoint { position: absolute; width: 38px; height: 38px; transform: translate(-50%, -50%); border: 2px solid var(--bg); border-radius: 50%; color: #102139; background: #f4f7ff; box-shadow: 0 1px 7px #07122480; font: 700 14px var(--font-mono); cursor: grab; touch-action: none; pointer-events: auto; }
+  .endpoint-b { color: #fff; background: #1757ed; }
+  .endpoint:active { cursor: grabbing; }
+  .map-label { position: absolute; top: .8rem; left: .8rem; z-index: 1; max-width: calc(100% - 1.6rem); padding: .45rem .6rem; border: 1px solid var(--line); border-radius: .35rem; background: color-mix(in srgb, var(--bg) 90%, transparent); color: var(--text); font: 10px var(--font-mono); letter-spacing: .045em; }
+  .view-tools { position: absolute; z-index: 4; right: .75rem; top: .75rem; }
+  .map-view { position: absolute; inset: 0; z-index: 3; background: var(--bg); }
+  .view-fallback { position: absolute; z-index: 5; inset: auto .75rem 4.5rem; padding: .8rem; border: 1px solid var(--line); border-radius: .5rem; background: var(--panel); color: var(--text); }
+  .map-detail, .attribution { margin: .55rem 0 0; font-size: .75rem; }
+  .attribution { color: var(--muted); }
+  .attribution-notes { margin-top: .35rem; color: var(--muted); font-size: .75rem; }
+  .attribution-notes summary { cursor: pointer; }
+  .attribution-notes p { max-width: 75ch; }
+  .route-legend { display: flex; flex-wrap: wrap; gap: .8rem 1rem; margin-top: .75rem; }
+  .legend-item { display: inline-flex; align-items: center; gap: .4rem; color: var(--muted); font: 10px var(--font-mono); }
+  .legend-item i { display: inline-block; width: 17px; height: 3px; border-radius: 4px; background: var(--route-color); }
+  .control-panel { display: grid; gap: 1rem; padding: 1rem; border: 1px solid var(--line); border-radius: .8rem; background: var(--panel); }
+  .panel-block { display: grid; gap: .65rem; }
+  .panel-block .eyebrow { margin-bottom: 0; font-size: 9px; }
+  .control-copy, .results-status { margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.55; }
+  .action-controls { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .action-controls .button { min-height: 40px; padding: .55rem .75rem; font-size: 12px; }
+  .range-control { display: grid; gap: .4rem; color: var(--text); font-size: .8rem; font-weight: 650; }
+  .range-control span { display: flex; justify-content: space-between; gap: .5rem; }
+  .range-control output { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .range-control input { width: 100%; min-height: 42px; margin: 0; cursor: pointer; accent-color: var(--accent); }
+  .algorithm-choice { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; border: 0; }
+  .algorithm-choice label { flex: 1; min-width: 62px; cursor: pointer; }
+  .algorithm-choice input { position: absolute; opacity: 0; }
+  .algorithm-choice span { display: grid; min-height: 42px; place-items: center; padding: .4rem; border: 1px solid var(--line); border-radius: .4rem; color: var(--muted); font-size: .75rem; }
+  .algorithm-choice input:checked + span { border-color: var(--accent); background: var(--soft); color: var(--text); }
+  .algorithm-choice input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 3px; }
+  .compare-button { justify-self: start; min-height: 40px; font-size: 12px; }
+  .compare-button[aria-pressed="true"] { border-color: var(--accent); background: var(--soft); }
+  .results-block { min-width: 0; padding-top: .75rem; border-top: 1px solid var(--line); }
+  .results-heading { display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
+  .results-heading .eyebrow { margin: 0; }
+  .text-button { padding: .4rem 0; border: 0; background: transparent; color: var(--accent); font: 11px var(--font-mono); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .table-wrap { max-width: 100%; overflow-x: auto; }
+  .results-table { width: 100%; border-collapse: collapse; font-size: 10px; font-variant-numeric: tabular-nums; }
+  .results-table th, .results-table td { padding: .45rem .35rem; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  .results-table thead th { color: var(--muted); font: 9px var(--font-mono); }
+  .results-table tr > :first-child { text-align: left; }
+  .results-table tbody th { color: var(--route-color); font-weight: 700; }
+  .bottom-actions { padding-top: .3rem; border-top: 1px solid var(--line); }
+  .range-control.compact { flex-basis: 100%; }
+  .experiment-notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3rem; padding-top: 2.5rem; margin-top: 2rem; border-top: 1px solid var(--line); }
+  .experiment-notes h2 { margin-top: 1rem; font-size: 1.4rem; letter-spacing: -.03em; }
+  .experiment-notes p { line-height: 1.7; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  @media (max-width: 900px) { .workspace { grid-template-columns: 1fr; } .control-panel { grid-template-columns: repeat(2, minmax(0,1fr)); align-items: start; } .results-block, .bottom-actions { grid-column: 1 / -1; } }
+  @media (max-width: 650px) { .experiment-notes { grid-template-columns: 1fr; gap: 1.5rem; } .canvas-frame { min-height: 0; } .source-row { align-items: stretch; } .field-label { flex: 1; } .source-row .action-controls { width: 100%; } .control-panel { grid-template-columns: 1fr; } .results-block, .bottom-actions { grid-column: auto; } .table-wrap { margin-inline: -.2rem; } .results-table { min-width: 430px; } .map-label { font-size: 8px; } .view-tools { right: .5rem; top: .5rem; } }
 </style>

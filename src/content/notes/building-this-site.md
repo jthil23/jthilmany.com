@@ -8,9 +8,9 @@ This site connects two sides of my work: professional business solutions and per
 
 ## Static first
 
-Astro builds the pages into HTML. Most of the site needs no browser JavaScript. The theme switch and the flow-field experiment are small exceptions: they run directly in the browser without a backend.
+Astro builds the pages into HTML. Most of the site needs no browser JavaScript. The theme switch and the lab experiments are the exceptions: they run directly in the browser without a backend. The radar page's headlines are fetched when the site is built, not by your browser.
 
-Identity, projects, and service links live in TypeScript data files. Notes are Markdown files. Adding content doesn't require a database or an admin server.
+Identity, projects, and the homelab service list live in TypeScript data files. Notes and guide chapters are Markdown files. Adding content doesn't require a database or an admin server.
 
 ## One identity, two themes
 
@@ -18,9 +18,9 @@ The logo combines initials and code braces with mountains, a trail, and trees. T
 
 Transparent dark-ink and frost-white versions let the same artwork sit on light and dark backgrounds. The default theme is deep navy with electric-blue accents; the theme switch selects a frost-light alternative and remembers that choice locally. Both logo versions preserve the shape and distressed texture of the supplied artwork.
 
-## One more container
+## Hosting
 
-The Docker build produces a static site served by nginx. An existing reverse proxy can route the root domain to this container while leaving Plex and other subdomains alone. TLS belongs at that proxy.
+GitHub Pages hosts the site. GitHub Actions builds it on each push to `main`, and Cloudflare DNS points the custom domain to Pages. The Docker build remains an optional self-host alternative: it produces a static site served by nginx.
 
 ## A directory, not a security boundary
 
@@ -28,4 +28,4 @@ The homelab page shows SOL's real services — logos, roles, and how they connec
 
 ## Room to play
 
-Two experiments so far: a canvas flow field and a generative topographic map with a trail winding through it. Press ⌘K (or Ctrl+K) anywhere to jump between pages, projects, and services. The lab can keep growing independently of the portfolio.
+Three experiments so far: trail pathfinding across real and generated terrain, AI cars learning a Formula 1 racing line, and an animated walk-through of how requests move through the homelab. Press ⌘K (or Ctrl+K) anywhere to jump between pages, projects, and services. The lab can keep growing independently of the portfolio.

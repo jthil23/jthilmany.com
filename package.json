@@ -11,12 +11,19 @@
     "build": "astro check && astro build",
     "preview": "astro preview",
     "check": "astro check",
+    "test": "node --experimental-strip-types --test \"src/**/*.test.ts\"",
     "astro": "astro"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",
     "@astrojs/sitemap": "^3.7.4",
     "astro": "^7.3.5",
+    "fast-xml-parser": "^5.11.2",
+    "fast-xml-validator": "^1.4.2",
+    "three": "^0.186.1",
     "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0"
   }
 }

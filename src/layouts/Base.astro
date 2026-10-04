@@ -6,8 +6,9 @@ import CommandPalette from '../components/CommandPalette.astro';
 import Snowfall from '../components/fx/Snowfall.astro';
 interface Props { title: string; description?: string; noindex?: boolean }
 const { title, description = site.description, noindex = false } = Astro.props;
-const nav = [['Work', '/work'], ['Projects', '/projects'], ['Lab', '/lab'], ['Notes', '/notes'], ['Homelab', '/homelab']];
+const nav = [['Work', '/work'], ['Projects', '/projects'], ['Lab', '/lab'], ['Guide', '/guide'], ['Radar', '/radar'], ['Notes', '/notes'], ['Homelab', '/homelab']];
 const pathname = Astro.url.pathname.replace(/\/$/, '') || '/';
+const ogImage = new URL('/og-card.jpg', Astro.site);
 ---
 <!doctype html>
 <html lang="en">
@@ -24,6 +25,14 @@ const pathname = Astro.url.pathname.replace(/\/$/, '') || '/';
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={new URL(Astro.url.pathname, Astro.site)} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={`${site.name} — ${site.tagline}`} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={`${title} · ${site.name}`} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
     <script is:inline>
       try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}
     </script>
@@ -60,6 +69,10 @@ const pathname = Astro.url.pathname.replace(/\/$/, '') || '/';
         update();
       });
       update();
+      // On narrow screens the nav is a horizontal scroller; keep the current page's link visible.
+      const nav = document.querySelector<HTMLElement>('.header nav');
+      const active = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+      if (nav && active && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = active.offsetLeft - nav.clientWidth / 2 + active.offsetWidth / 2;
       const header = document.querySelector<HTMLElement>('.header-shell');
       let scrollFrame = 0;
       const updateHeader = () => {

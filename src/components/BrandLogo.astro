@@ -8,13 +8,18 @@ const { variant = 'full', class: className, priority = false } = Astro.props;
 const stem = variant === 'full' ? 'jeff-thilmany-logo' : 'jeff-thilmany-emblem';
 const width = variant === 'full' ? 1174 : 954;
 const height = variant === 'full' ? 903 : 670;
+const sizes = variant === 'emblem'
+  ? '(max-width: 760px) 58px, 76px'
+  : '(max-width: 650px) 81vw, 520px';
+const widths = variant === 'full' ? [340, 520, 680, 1040] : [58, 76, 116, 152];
+const srcset = (tone: string) => widths.map(size => `/brand/${stem}-${tone}-${size}.webp ${size}w`).join(', ');
 const alt = variant === 'full'
   ? 'Jeff Thilmany — Build, Solve, Explore, Repeat. JT, code braces, mountains, a winding trail, and trees.'
   : '';
 ---
 <span class:list={['brand-art', className]}>
-  <img class="logo-dark-background" src={`/brand/${stem}-inverted.webp`} width={width} height={height} alt={alt} fetchpriority={priority ? 'high' : undefined} decoding="async" />
-  <img class="logo-light-background" src={`/brand/${stem}-transparent.webp`} width={width} height={height} alt={alt} decoding="async" />
+  <img class="logo-dark-background" src={`/brand/${stem}-inverted-${widths[0]}.webp`} srcset={srcset('inverted')} sizes={sizes} width={width} height={height} alt={alt} loading={priority ? 'eager' : 'lazy'} fetchpriority={priority ? 'high' : undefined} decoding="async" />
+  <img class="logo-light-background" src={`/brand/${stem}-transparent-${widths[0]}.webp`} srcset={srcset('transparent')} sizes={sizes} width={width} height={height} alt={alt} loading="lazy" decoding="async" />
 </span>
 
 <style>

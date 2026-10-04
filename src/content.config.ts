@@ -11,4 +11,14 @@ const notes = defineCollection({
   }),
 });
 
-export const collections = { notes };
+const guide = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/guide' }),
+  schema: z.object({
+    title: z.string(),
+    description: z.string(),
+    order: z.number().int().positive(),
+    updated: z.coerce.date().optional(),
+  }),
+});
+
+export const collections = { notes, guide };

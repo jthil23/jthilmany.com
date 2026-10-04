@@ -872,8 +872,23 @@ p {
     width: 58px;
   }
 
+  /* One swipeable row instead of wrapping: keeps the sticky header short. */
   .header nav {
+    flex-wrap: nowrap;
     column-gap: 22px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    padding-inline: 2px 28px;
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+
+  .header nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .header nav a {
+    flex: 0 0 auto;
   }
 
   .header-tools {

@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-Disallow: /homelab
 Sitemap: https://jthilmany.com/sitemap-index.xml
