@@ -31,9 +31,26 @@ npm run preview -- --host 127.0.0.1 --port 4321
 
 The production build passes Astro diagnostics with zero errors, warnings, or hints and generates ten HTML pages. Browser checks covered: every route at desktop and 390 px with no horizontal overflow and no broken images; both themes; homelab category filters and keyboard selection of services; command palette open (Ctrl/⌘K), search, arrow/Enter navigation to a service anchor and a lab page, and Esc; Topo trail reseeding; Flow field pause; reduced motion leaving all `.reveal` content visible with no running animations. Internal links resolve.
 
-Compose configuration validation passes. Docker image and nginx runtime checks remain unverified because the local Docker daemon is not running. No DNS or existing service routes were changed.
+Compose configuration validation passes. The Docker image itself is unverified locally (no Docker daemon on the development Mac); the live site is served by GitHub Pages instead (see below).
 
 `astro.config.mjs` sets the canonical site URL to `https://jthilmany.com`. Change it if the canonical domain changes; it is also used for the sitemap. The site builds for the domain root, not an arbitrary subdirectory. Static content changes require a rebuild and redeployment.
+
+## Live deployment (GitHub Pages)
+
+The public site is built and published by `.github/workflows/deploy.yml` on every push to `main` of [jthil23/jthilmany.com](https://github.com/jthil23/jthilmany.com): Node from `.nvmrc`, `npm ci`, `npm run build` (diagnostics + build), then `actions/upload-pages-artifact` and `actions/deploy-pages`. The Pages source is "GitHub Actions"; the custom domain is `jthilmany.com` (`public/CNAME` is shipped too) with HTTPS enforced. GitHub serves `404.html` for unknown routes.
+
+Cloudflare DNS for `jthilmany.com` (all DNS-only, not proxied):
+
+| Record | Value | Purpose |
+| --- | --- | --- |
+| `A jthilmany.com` | 185.199.108.153, 185.199.109.153, 185.199.110.153, 185.199.111.153 | GitHub Pages (public) |
+| `AAAA jthilmany.com` | 2606:50c0:8000::153 … 8003::153 | GitHub Pages over IPv6 |
+| `CNAME www` | `jthil23.github.io` | Redirects to the apex |
+| `A *.jthilmany.com` | 192.168.1.3 | Nginx Proxy Manager on SOL — LAN/Tailscale-only services |
+
+The wildcard used to be a CNAME to the apex; it was converted to its own `A` record **before** the apex moved, so every service subdomain still lands on Nginx Proxy Manager, whose access list only admits the LAN and Tailscale. A JSON backup of the previous records is on SOL in `/mnt/user/appdata/jthilmany-site-dns-backup/`. To roll back, restore the apex `A` to `192.168.1.3` and remove the GitHub `A`/`AAAA`/`www` records.
+
+The self-hosted container setup below remains an alternative (for example, behind a Cloudflare Tunnel, which needs a token with Tunnel permissions; the current DNS-only token cannot create one).
 
 ## Approved branding
 
@@ -49,10 +66,12 @@ The default theme is deep navy with hyper-blue (`#2563FF`) and ice-blue accents,
 
 ## Interaction features
 
-- **Command palette** (`src/components/CommandPalette.astro`, included in `Base.astro`): ⌘K / Ctrl+K or the header search button. Searches pages, project repositories, and every service (opens `/homelab#<slug>`, or the service `url` if present); actions toggle the theme and copy the site URL. Any element with `data-open-palette` opens it.
+- **Command palette** (`src/components/CommandPalette.astro`, included in `Base.astro`): ⌘K / Ctrl+K or the header search button. Searches pages, project repositories, and every service (opens the service's link if it has one, otherwise `/homelab#<slug>`); actions toggle the theme and copy the site URL. Any element with `data-open-palette` opens it.
 - **Scroll reveal**: add class `reveal` to any element. Content is visible without JavaScript and under reduced motion; only elements that start offscreen animate in.
 - **Sticky header** becomes translucent with a blur after scrolling.
-- All animation (parallax, marquee, pipelines, count-ups, terminal typing, trail drawing) stops under `prefers-reduced-motion`.
+- **Visual effects**: native cross-document view transitions between pages (`@view-transition`, no router); an animated aurora and drifting ice crystals in the homepage hero (`src/components/fx/Snowfall.astro`); a pointer-following glow on `.card` / `[data-glow]` elements (fine pointers only); a scroll-progress hairline on the header; button sheen and animated nav underlines.
+- **Easter eggs**: the Konami code (↑↑↓↓←→←→BA) triggers a full-page flurry and a "Let it snow ❄" toast; anything can trigger the flurry with `window.dispatchEvent(new CustomEvent('jt:snow'))`. The browser console shows a JT greeting.
+- All animation (parallax, aurora, snow, marquee, pipelines, count-ups, terminal typing, trail drawing, view transitions) stops under `prefers-reduced-motion`.
 
 ## Content reference
 
@@ -61,7 +80,7 @@ Content is kept in the repository rather than fetched from a private API:
 - `src/data/site.ts`: the `site` object contains `name`, `domain`, `tagline`, `description`, `about`, and `socials` (`label` and `url`; currently GitHub and LinkedIn). Socials render on the homepage and in the footer. Keep identity, biography, and links factual.
 - `src/data/projects.ts`: the `projects` list uses `title`, `description`, `tags`, optional `href`, and `featured`. It currently lists three original GitHub repositories (Command Center, Main Scraper, F1 Dashboard); descriptions describe source code, not deployed services. Forks are intentionally excluded. A project without a real public destination can omit `href`.
 - `src/pages/work.astro`: professional focus, grounded in the public LinkedIn headline. It intentionally contains no workplace case studies, dates, or confidential details; add those only from supplied material.
-- `src/data/services.ts`: the real SOL inventory, taken from the public Command Center design spec, config example, and bundled icons, plus Main Scraper's integrations. Exports `server` (hardware facts), `categories`, `services` (`slug`, `name`, `icon`, `category`, `description`, optional `url`), `mediaPipeline`, `smartHomePipeline`, and `serviceBySlug`. Logos live in `public/icons/services/` (from the Command Center repo; Frigate, Unraid, and Tdarr from homarr-labs dashboard-icons). Only Plex has a `url` (the public `app.plex.tv` web app). Add a `url` only for an address that is safe to publish; a link is **not an authorization rule**. Private IPs, ports, and keys from the Command Center config are deliberately excluded, as are adult-media services. The site never probes services.
+- `src/data/services.ts`: the SOL inventory, taken from the live container list and Nginx Proxy Manager hosts on the server. Exports `server` (verified hardware facts), `categories`, `services` (`slug`, `name`, `icon`, `category`, `description`, optional `link` `{ href, scope }`), `mediaPipeline`, `smartHomePipeline`, and `serviceBySlug`. Links with `scope: 'home'` are the real `*.jthilmany.com` subdomains (Plex, Seerr, Sonarr, Radarr, NZBGet, Tdarr, Home Assistant, Frigate, Vaultwarden, Grafana, UniFi); they render with a "Home network" badge because they only work on the LAN or over Tailscale. Logos live in `public/icons/services/` with the upstream Apache-2.0 `LICENSE` and a `NOTICE.md` listing sources. Private IPs, ports, and keys are never included, and adult-media containers are deliberately omitted. The site never probes services.
 - `src/content/notes/*.md`: add or edit Markdown notes with `title`, `description`, and `date` frontmatter. The filename provides the note slug.
 
 For example, a note named `src/content/notes/a-real-note.md` has this shape:
